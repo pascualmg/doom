@@ -34,14 +34,8 @@
 ;; `load-theme' function. This is the default:
 ;; (setq doom-theme 'doom-one)
 
-(setq doom-font (font-spec :family "Hack Nerd Font Mono JBM Ligatured CCG" :size 14)
-      doom-variable-pitch-font (font-spec :family "Hack Nerd Font JBM Ligatured CCG" :size 15)
-      doom-big-font (font-spec :family "Hack Nerd Font Mono JBM Ligatured CCG" :size 24)
-      doom-symbol-font (font-spec :family "Hack Nerd Font Mono JBM Ligatured CCG")
-      doom-serif-font (font-spec :family "Hack Nerd Font Mono JBM Ligatured CCG" :weight 'light))
+(push '(fullscreen . maximized) initial-frame-alist)
 
-;; Habilitar ligaduras
-(setq +ligatures-in-modes t)
 ;; Mensaje para verificar la configuración actual de la fuente
 (message "Valor actual de doom-font: %s" doom-font)
 
@@ -107,7 +101,6 @@
 ;;para que se exporten en los htmls los results en los org
 (setq org-export-allow-bind-keywords t)
 
-;; Añade esto a tu archivo ~/.doom.d/config.el
 
 ;; Habilitar transparencia
 (set-frame-parameter (selected-frame) 'alpha '(85 . 85))
@@ -129,20 +122,6 @@
 ;; Atajo de teclado para alternar la transparencia
 (global-set-key (kbd "C-c t") 'toggle-transparency)
 
-;; Si estás usando el tema doom-one, puedes intentar esto para un fondo más transparente
-(use-package! doom-themes
-  :config
-  (setq doom-themes-enable-bold t
-        doom-themes-enable-italic t)
-  (load-theme 'doom-one t)
-  (doom-themes-visual-bell-config)
-  (doom-themes-org-config)
-  ;; Ajusta el fondo para que sea completamente transparente
-  (set-face-background 'default "none"))
-
-;; Si lo anterior no funciona, puedes intentar esto como alternativa
-(unless (display-graphic-p)
-  (set-face-background 'default "none"))
 
 ;; Personalización de colores para git-gutter
 (after! haskell-mode
