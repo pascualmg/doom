@@ -1,2 +1,3 @@
-# doom
-# doom
+# My doom emacs config!
+
+
