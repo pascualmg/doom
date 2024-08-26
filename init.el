@@ -194,5 +194,3 @@
        :config
        ;;literate
        (default +bindings +smartparens))
-
-(setq shell-file-name "/usr/local/bin/zsh")

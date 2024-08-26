@@ -126,3 +126,13 @@
 ;; Personalización de colores para git-gutter
 (after! haskell-mode
   (setq haskell-interactive-popup-errors nil))
+
+(defun copy-whole-buffer-to-clipboard ()
+  "Copy entire buffer to clipboard"
+  (interactive)
+  (clipboard-kill-ring-save (point-min) (point-max))
+  (message "Buffer copied to clipboard"))
+
+(map! :leader
+      :desc "Copy whole buffer to clipboard"
+      "y b" #'copy-whole-buffer-to-clipboard)
