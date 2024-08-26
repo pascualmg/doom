@@ -1,0 +1,87 @@
+#+TITLE: Configuración de paquetes de Doom Emacs
+#+AUTHOR: Pascual M.G.
+
+* Introducción
+Este archivo contiene la configuración de paquetes para Doom Emacs.
+Para instalar un paquete, decláralo aquí y ejecuta 'doom sync' en la línea de comandos.
+Luego, reinicia Emacs para que los cambios surtan efecto, o usa 'M-x doom/reload'.
+
+* Paquetes instalados
+** Telega
+Cliente de Telegram para Emacs.
+#+BEGIN_SRC emacs-lisp
+(package! telega)
+#+END_SRC
+
+** Temas y apariencia
+Paquetes relacionados con la apariencia y temas de Emacs.
+#+BEGIN_SRC emacs-lisp
+(package! ewal-spacemacs-themes)
+(package! ewal-evil-cursors)
+(package! spaceline)
+#+END_SRC
+
+** Org-mode
+Paquetes adicionales para mejorar org-mode.
+#+BEGIN_SRC emacs-lisp
+(package! org-present)
+#+END_SRC
+
+* Comentarios sobre la instalación de paquetes
+** Instalar desde MELPA, ELPA o emacsmirror
+Para instalar un paquete desde estos repositorios:
+#+BEGIN_SRC emacs-lisp
+;; (package! some-package)
+#+END_SRC
+
+** Instalar desde un repositorio git remoto
+Para instalar un paquete directamente desde un repositorio git remoto:
+#+BEGIN_SRC emacs-lisp
+;; (package! another-package
+;;   :recipe (:host github :repo "username/repo"))
+#+END_SRC
+
+** Especificar archivos para la instalación
+Si el paquete no contiene un archivo PACKAGENAME.el o está en un subdirectorio:
+#+BEGIN_SRC emacs-lisp
+;; (package! this-package
+;;   :recipe (:host github :repo "username/repo"
+;;            :files ("some-file.el" "src/lisp/*.el")))
+#+END_SRC
+
+** Deshabilitar un paquete incluido con Doom
+Para deshabilitar un paquete incluido con Doom:
+#+BEGIN_SRC emacs-lisp
+;; (package! builtin-package :disable t)
+#+END_SRC
+
+** Sobrescribir la receta de un paquete incorporado
+Para modificar la receta de un paquete incorporado:
+#+BEGIN_SRC emacs-lisp
+;; (package! builtin-package :recipe (:nonrecursive t))
+;; (package! builtin-package-2 :recipe (:repo "myfork/package"))
+#+END_SRC
+
+** Instalar desde una rama específica
+Para instalar un paquete desde una rama o etiqueta particular:
+#+BEGIN_SRC emacs-lisp
+;; (package! builtin-package :recipe (:branch "develop"))
+#+END_SRC
+
+** Especificar un commit particular
+Para instalar un paquete desde un commit específico:
+#+BEGIN_SRC emacs-lisp
+;; (package! builtin-package :pin "1a2b3c4d5e")
+#+END_SRC
+
+** Desanclar paquetes
+Para desanclar paquetes individuales o múltiples:
+#+BEGIN_SRC emacs-lisp
+;; (unpin! pinned-package)
+;; (unpin! pinned-package another-pinned-package)
+#+END_SRC
+
+Para desanclar todos los paquetes (NO RECOMENDADO):
+#+BEGIN_SRC emacs-lisp
+;; (unpin! t)
+#+END_SRC

@@ -1,0 +1,409 @@
+#+BEGIN_SRC emacs-lisp
+        (org-babel-load-file (expand-file-name "config.org" doom-private-dir))
+        (org-babel-load-file (expand-file-name "packages.org" doom-private-dir))
+#+END_SRC
+
+#+TITLE: Configuración de Doom Emacs
+#+AUTHOR: Tu Nombre
+#+DESCRIPTION: Archivo de configuración init.org para Doom Emacs con comentarios explicativos
+
+* Configuración de módulos de Doom
+
+#+BEGIN_SRC emacs-lisp
+(doom! :input
+       ;;chinese
+       ;;japanese
+       ;;layout            ; auie,ctsrnm is the superior home row
+
+       :completion
+       company           ; the ultimate code completion backend
+       ;;helm              ; the *other* search engine for love and life
+       ;;ido               ; the other *other* search engine...
+       ;;ivy               ; a search engine for love and life
+       vertico           ; the search engine of the future
+
+       :ui
+       ;;deft              ; notational velocity for Emacs
+       doom              ; what makes DOOM look the way it does
+       doom-dashboard    ; a nifty splash screen for Emacs
+       ;;doom-quit         ; DOOM quit-message prompts when you quit Emacs
+       (emoji +unicode)  ; 🙂
+       hl-todo           ; highlight TODO/FIXME/NOTE/DEPRECATED/HACK/REVIEW
+       ;;hydra
+       ;;indent-guides     ; highlighted indent columns
+       (ligatures +extra)        ; ligatures and symbols to make your code pretty again
+       minimap           ; show a map of the code on the side
+       modeline          ; snazzy, Atom-inspired modeline, plus API
+       ;;nav-flash         ; blink cursor line after big motions
+       ;;neotree           ; a project drawer, like NERDTree for vim
+       ophints           ; highlight the region an operation acts on
+       (popup +defaults)   ; tame sudden yet inevitable temporary windows
+       tabs              ; a tab bar for Emacs
+       treemacs          ; a project drawer, like neotree but cooler
+       ;;unicode           ; extended unicode support for various languages
+       (vc-gutter +pretty) ; vcs diff in the fringe
+       vi-tilde-fringe   ; fringe tildes to mark beyond EOB
+       ;;window-select     ; visually switch windows
+       workspaces        ; tab emulation, persistence & separate workspaces
+       zen               ; distraction-free coding or writing
+
+       :editor
+       (evil +everywhere); come to the dark side, we have cookies
+       file-templates    ; auto-snippets for empty files
+       fold              ; (nigh) universal code folding
+       ;;(format +onsave)  ; automated prettiness
+       ;;god               ; run Emacs commands without modifier keys
+       ;;lispy             ; vim for lisp, for people who don't like vim
+       ;;multiple-cursors  ; editing in many places at once
+       ;;objed             ; text object editing for the innocent
+       ;;parinfer          ; turn lisp into python, sort of
+       ;;rotate-text       ; cycle region at point between text candidates
+       snippets          ; my elves. They type so I don't have to
+       ;;word-wrap         ; soft wrapping with language-aware indent
+
+       :emacs
+       dired             ; making dired pretty [functional]
+       electric          ; smarter, keyword-based electric-indent
+       ;;ibuffer         ; interactive buffer management
+       undo              ; persistent, smarter undo for your inevitable mistakes
+       vc                ; version-control and Emacs, sitting in a tree
+
+       :term
+       ;;eshell            ; the elisp shell that works everywhere
+       ;;shell             ; simple shell REPL for Emacs
+       ;;term              ; basic terminal emulator for Emacs
+       vterm             ; the best terminal emulation in Emacs
+
+       :checkers
+       syntax              ; tasing you for every semicolon you forget
+       ;;(spell +flyspell) ; tasing you for misspelling mispelling
+       ;;grammar           ; tasing grammar mistake every you make
+
+       :tools
+       ;;ansible
+       ;;biblio            ; Writes a PhD for you (citation needed)
+       ;;collab            ; buffers with friends
+       debugger          ; FIXME stepping through code, to help you add bugs
+       ;;direnv
+       ;;docker
+       ;;editorconfig      ; let someone else argue about tabs vs spaces
+       ;;ein               ; tame Jupyter notebooks with emacs
+       (eval +overlay)     ; run code, run (also, repls)
+       ;;gist              ; interacting with github gists
+       lookup              ; navigate your code and its documentation
+       lsp               ; M-x vscode
+       magit             ; a git porcelain for Emacs
+       ;;make              ; run make tasks from Emacs
+       ;;pass              ; password manager for nerds
+       ;;pdf               ; pdf enhancements
+       ;;prodigy           ; FIXME managing external services & code builders
+       ;;rgb               ; creating color strings
+       ;;taskrunner        ; taskrunner for all your projects
+       ;;terraform         ; infrastructure as code
+       ;;tmux              ; an API for interacting with tmux
+       ;;tree-sitter       ; syntax and parsing, sitting in a tree...
+       ;;upload            ; map local to remote projects via ssh/ftp
+
+       :os
+       (:if IS-MAC macos)  ; improve compatibility with macOS
+       tty               ; improve the terminal Emacs experience
+
+       :lang
+       ;;agda              ; types of types of types of types...
+       ;;beancount         ; mind the GAAP
+       ;;(cc +lsp)         ; C > C++ == 1
+       ;;clojure           ; java with a lisp
+       ;;common-lisp       ; if you've seen one lisp, you've seen them all
+       ;;coq               ; proofs-as-programs
+       ;;crystal           ; ruby at the speed of c
+       ;;csharp            ; unity, .NET, and mono shenanigans
+       ;;data              ; config/data formats
+       ;;(dart +flutter)   ; paint ui and not much else
+       ;;dhall
+       ;;elixir            ; erlang done right
+       ;;elm               ; care for a cup of TEA?
+       emacs-lisp        ; drown in parentheses
+       ;;erlang            ; an elegant language for a more civilized age
+       ;;ess               ; emacs speaks statistics
+       ;;factor
+       ;;faust             ; dsp, but you get to keep your soul
+       ;;fortran           ; in FORTRAN, GOD is REAL (unless declared INTEGER)
+       ;;fsharp            ; ML stands for Microsoft's Language
+       ;;fstar             ; (dependent) types and (monadic) effects and Z3
+       ;;gdscript          ; the language you waited for
+       ;;(go +lsp)         ; the hipster dialect
+       ;;(graphql +lsp)    ; Give queries a REST
+       (haskell +lsp)    ; a language that's lazier than I am
+       ;;hy                ; readability of scheme w/ speed of python
+       ;;idris             ; a language you can depend on
+       json              ; At least it ain't XML
+       ;;(java +lsp)       ; the poster child for carpal tunnel syndrome
+       javascript        ; all(hope(abandon(ye(who(enter(here))))))
+       ;;julia             ; a better, faster MATLAB
+       ;;kotlin            ; a better, slicker Java(Script)
+       ;;latex             ; writing papers in Emacs has never been so fun
+       ;;lean              ; for folks with too much to prove
+       ;;ledger            ; be audit you can be
+       ;;lua               ; one-based indices? one-based indices
+       markdown          ; writing docs for people to ignore
+       ;;nim               ; python + lisp at the speed of c
+       nix               ; I hereby declare "nix geht mehr!"
+       ;;ocaml             ; an objective camel
+       (org +lsp)              ; organize your plain life in plain text
+       ;;php               ; perl's insecure younger brother
+       ;;plantuml          ; diagrams for confusing people more
+       ;;purescript        ; javascript, but functional
+       ;;python            ; beautiful is better than ugly
+       ;;qt                ; the 'cutest' gui framework ever
+       ;;racket            ; a DSL for DSLs
+       ;;raku              ; the artist formerly known as perl6
+       ;;rest              ; Emacs as a REST client
+       ;;rst               ; ReST in peace
+       ;;(ruby +rails)     ; 1.step {|i| p "Ruby is #{i.even? ? 'love' : 'life'}"}
+       ;;(rust +lsp)       ; Fe2O3.unwrap().unwrap().unwrap().unwrap()
+       ;;scala             ; java, but good
+       ;;(scheme +guile)   ; a fully conniving family of lisps
+       sh                ; she sells {ba,z,fi}sh shells on the C xor
+       ;;sml
+       ;;solidity          ; do you need a blockchain? No.
+       ;;swift             ; who asked for emoji variables?
+       ;;terra             ; Earth and Moon in alignment for performance.
+       web               ; the tubes
+       yaml              ; JSON, but readable
+       ;;zig               ; C, but simpler
+
+       :email
+       ;;(mu4e +org +gmail)
+       ;;notmuch
+       ;;(wanderlust +gmail)
+
+       :app
+       ;;calendar
+       ;;emms
+       ;;everywhere        ; *leave* Emacs!? You must be joking
+       ;;irc               ; how neckbeards socialize
+       ;;(rss +org)        ; emacs as an RSS reader
+       ;;twitter           ; twitter client https://twitter.com/vnought
+
+       :config
+       ;;literate
+       (default +bindings +smartparens))
+#+END_SRC
+
+* Comentarios sobre módulos no utilizados
+
+** :input
+*** chinese
+Agrega soporte para el idioma chino, incluyendo métodos de entrada.
+
+*** japanese
+Proporciona soporte para el idioma japonés.
+
+*** layout
+Ofrece soporte para disposiciones de teclado alternativas como AZERTY o Dvorak.
+
+** :completion
+*** helm
+Un poderoso framework de completado y selección, alternativa a vertico.
+
+*** ido
+Sistema de completado integrado en Emacs, más ligero que helm o ivy.
+
+*** ivy
+Framework de completado y selección, alternativa a vertico y helm.
+
+** :ui
+*** deft
+Herramienta para tomar notas rápidas y buscar en ellas eficientemente.
+
+*** doom-quit
+Agrega mensajes divertidos al intentar salir de Emacs.
+
+*** hydra
+Permite crear menús de acceso rápido para comandos relacionados.
+
+*** indent-guides
+Muestra guías visuales para la indentación del código.
+
+*** nav-flash
+Destella brevemente la línea del cursor después de grandes movimientos.
+
+*** neotree
+Explorador de archivos en forma de árbol, similar a NERDTree de Vim.
+
+*** unicode
+Mejora el soporte de Unicode para varios idiomas.
+
+*** window-select
+Facilita el cambio entre ventanas de forma visual.
+
+** :editor
+*** format
+Formatea automáticamente el código al guardar.
+
+*** god
+Permite ejecutar comandos de Emacs sin teclas modificadoras.
+
+*** lispy
+Edición estructural para Lisp, alternativa a evil para usuarios de Lisp.
+
+*** multiple-cursors
+Permite editar en múltiples lugares simultáneamente.
+
+*** objed
+Edición basada en objetos de texto para usuarios que no usan evil.
+
+*** parinfer
+Ayuda a mantener la estructura de código Lisp mientras se escribe.
+
+*** rotate-text
+Cicla entre diferentes opciones de texto en una región.
+
+*** word-wrap
+Ajuste de línea suave con indentación consciente del lenguaje.
+
+** :emacs
+*** ibuffer
+Gestión interactiva de buffers, más potente que el gestor de buffers predeterminado.
+
+** :term
+*** eshell
+Shell de Emacs escrita en Emacs Lisp, portable y extensible.
+
+*** shell
+Emulador de terminal simple integrado en Emacs.
+
+*** term
+Emulador de terminal básico para Emacs.
+
+** :checkers
+*** spell
+Corrector ortográfico integrado.
+
+*** grammar
+Corrector gramatical para mejorar la calidad de la escritura.
+
+** :tools
+*** ansible
+Integración con Ansible para gestión de configuraciones.
+
+*** biblio
+Herramientas para gestión de referencias bibliográficas.
+
+*** collab
+Permite la colaboración en tiempo real en buffers.
+
+*** direnv
+Integración con direnv para manejar entornos de desarrollo.
+
+*** docker
+Soporte para trabajar con Docker desde Emacs.
+
+*** editorconfig
+Mantiene estilos de codificación consistentes entre editores.
+
+*** ein
+Soporte para trabajar con Jupyter Notebooks en Emacs.
+
+*** gist
+Interacción con GitHub Gists directamente desde Emacs.
+
+*** make
+Ejecuta tareas de make desde Emacs.
+
+*** pass
+Integración con el gestor de contraseñas `pass`.
+
+*** pdf
+Mejoras para trabajar con archivos PDF en Emacs.
+
+*** prodigy
+Gestión de servicios externos y constructores de código.
+
+*** rgb
+Herramientas para crear y manipular cadenas de color.
+
+*** taskrunner
+Ejecuta tareas de diversos sistemas de construcción.
+
+*** terraform
+Soporte para trabajar con Terraform (infraestructura como código).
+
+*** tmux
+API para interactuar con tmux desde Emacs.
+
+*** tree-sitter
+Mejora el resaltado de sintaxis y el análisis de código.
+
+*** upload
+Mapea proyectos locales a remotos via ssh/ftp.
+
+** :lang
+*** agda
+Soporte para el lenguaje de programación Agda.
+
+*** beancount
+Soporte para el sistema de contabilidad de texto plano Beancount.
+
+*** cc
+Soporte para lenguajes de la familia C (C, C++, Objective-C).
+
+*** clojure
+Soporte para el lenguaje de programación Clojure.
+
+*** common-lisp
+Soporte para Common Lisp.
+
+*** coq
+Soporte para el asistente de pruebas Coq.
+
+*** crystal
+Soporte para el lenguaje de programación Crystal.
+
+*** csharp
+Soporte para C# y el ecosistema .NET.
+
+*** data
+Soporte para formatos de datos como CSV, JSON, YAML.
+
+*** dart
+Soporte para el lenguaje Dart y el framework Flutter.
+
+*** dhall
+Soporte para el lenguaje de configuración Dhall.
+
+*** elixir
+Soporte para el lenguaje de programación Elixir.
+
+*** elm
+Soporte para el lenguaje de programación Elm.
+
+*** erlang
+Soporte para el lenguaje de programación Erlang.
+
+*** ess
+Soporte para lenguajes estadísticos como R.
+
+*** factor
+Soporte para el lenguaje de programación Factor.
+
+*** faust
+Soporte para el lenguaje de programación de audio Faust.
+
+*** fortran
+Soporte para el lenguaje de programación Fortran.
+
+*** fsharp
+Soporte para el lenguaje de programación F#.
+
+*** fstar
+Soporte para el lenguaje de programación F*.
+
+*** gdscript
+Soporte para GDScript, el lenguaje de scripting de Godot.
+
+*** go
+Soporte para el lenguaje de programación Go.
+
+*** graphql
+Soporte para el lengu
