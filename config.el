@@ -123,9 +123,9 @@
 (global-set-key (kbd "C-c t") 'toggle-transparency)
 
 
-;; Personalización de colores para git-gutter
 (after! haskell-mode
   (setq haskell-interactive-popup-errors nil))
+  (setq haskell-process-type 'stack-ghci)
 
 (defun copy-whole-buffer-to-clipboard ()
   "Copy entire buffer to clipboard"
@@ -136,3 +136,9 @@
 (map! :leader
       :desc "Copy whole buffer to clipboard"
       "y b" #'copy-whole-buffer-to-clipboard)
+
+;org babel , que permite ejecutar fragmentos incrustados en el .org
+   (org-babel-do-load-languages
+    'org-babel-load-languages
+    '((emacs-lisp . t)
+      (haskell . t)))
