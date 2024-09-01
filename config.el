@@ -34,6 +34,22 @@
 ;; `load-theme' function. This is the default:
 ;; (setq doom-theme 'doom-one)
 
+;;
+;;
+(when (display-graphic-p)
+  ;; Configuración solo para modo gráfico
+  (setq doom-font (font-spec :family "Hack" :size 14))
+  (setq doom-variable-pitch-font (font-spec :family "Avenir Next" :size 13))
+  (setq doom-unicode-font (font-spec :family "Apple Color Emoji"))
+
+  ;; Configuración específica para Haskell
+  (add-hook! 'haskell-mode-hook
+    (setq buffer-face-mode-face '(:family "Hasklug Nerd Font Mono"))
+    (buffer-face-mode +1)))
+
+;; Mensaje para verificar la configuración actual de la fuente
+(add-hook! 'doom-init-ui-hook
+  (message "Valor actual de doom-font: %s" doom-font))
 (push '(fullscreen . maximized) initial-frame-alist)
 
 ;; Mensaje para verificar la configuración actual de la fuente
