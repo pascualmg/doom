@@ -142,3 +142,5 @@
     'org-babel-load-languages
     '((emacs-lisp . t)
       (haskell . t)))
+
+(setq org-babel-haskell-compiler "stack ghc --")
