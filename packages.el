@@ -58,4 +58,3 @@
 (package! ewal-evil-cursors)
 (package! spaceline)
 (package! org-present)
-
