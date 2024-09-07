@@ -117,11 +117,9 @@
 (setq org-export-allow-bind-keywords t)
 
 
-;; Habilitar transparencia
 (set-frame-parameter (selected-frame) 'alpha '(85 . 85))
 (add-to-list 'default-frame-alist '(alpha . (85 . 85)))
 
-;; Función para alternar la transparencia
 (defun toggle-transparency ()
   (interactive)
   (let ((alpha (frame-parameter nil 'alpha)))
@@ -134,7 +132,6 @@
               100)
          '(85 . 85) '(100 . 100)))))
 
-;; Atajo de teclado para alternar la transparencia
 (global-set-key (kbd "C-c t") 'toggle-transparency)
 
 
@@ -152,7 +149,6 @@
       :desc "Copy whole buffer to clipboard"
       "y b" #'copy-whole-buffer-to-clipboard)
 
-;org babel , que permite ejecutar fragmentos incrustados en el .org
    (org-babel-do-load-languages
     'org-babel-load-languages
     '((emacs-lisp . t)
