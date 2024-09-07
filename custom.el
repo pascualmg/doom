@@ -6,7 +6,7 @@
  '(ignored-local-variable-values '((eval progn (pp-buffer) (indent-buffer))))
  '(magit-todos-insert-after '(bottom) nil nil "Changed by setter of obsolete option `magit-todos-insert-at'")
  '(package-selected-packages
-   '(logview haskell-mode org-present telega rainbow-delimiters ac-php emojify base16-theme spacemacs-theme @))
+   '(gptel ellama geben logview haskell-mode org-present telega rainbow-delimiters ac-php emojify base16-theme spacemacs-theme @))
  '(warning-suppress-types '((emacs) (defvaralias))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
@@ -14,4 +14,3 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  )
-

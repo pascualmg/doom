@@ -58,4 +58,7 @@
 (package! ewal-evil-cursors)
 (package! spaceline)
 (package! org-present)
-
+(package! ellama)
+(package! gptel)
+(package! copilot
+  :recipe (:host github :repo "copilot-emacs/copilot.el" :files ("*.el")))

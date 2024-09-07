@@ -101,11 +101,10 @@
   (setq php-mode-coding-style 'psr2) ; Estilo de codificación PSR-2
 
   ;; Ruta al ejecutable de PHP proporcionado por Nix
-  (setq php-mode-program "/nix/store/07vcszwmkfxhdjnsi5psxzr47zg9xkjj-php-with-extensions-8.2.13/bin/php")
-  )
-
-  (setq dap-php-debug-program '("/nix/store/07vcszwmkfxhdjnsi5psxzr47zg9xkjj-php-with-extensions-8.2.13/bin/php" "-dxdebug.remote_enable=1" "-dxdebug.remote_mode=req" "-dxdebug.remote_port=9000" "-dxdebug.remote_host=127.0.0.1" "-dxdebug.remote_connect_back=0")
-  )
+  ;;(setq php-mode-program "/nix/store/wgpvi1n58dsh10d7g087v21i2cw13ixj-php-with-extensions-8.3.3/bin/php")
+  ;;(setq dap-php-debug-program '("/nix/store/wgpvi1n58dsh10d7g087v21i2cw13ixj-php-with-extensions-8.3.3/bin/php" "-dxdebug.remote_enable=1" "-dxdebug.remote_mode=req" "-dxdebug.remote_port=9000" "-dxdebug.remote_host=127.0.0.1" "-dxdebug.remote_connect_back=0")
+  ;;)
+)
 
 (setq telega-server-libs-prefix "/usr/local/lib/tdlib")
 
@@ -160,3 +159,23 @@
       (haskell . t)))
 
 (setq org-babel-haskell-compiler "stack ghc --")
+
+(use-package gptel
+  :ensure t
+  :config
+  (setq gptel-backend (gptel-make-ollama "Ollama"
+                                         :host "localhost:11434"
+                                         :stream t
+                                         :models '("llama3.1:latest")))
+  (setq gptel-model "llama3.1:latest")
+  (setq gptel-default-mode 'org-mode)  ; O 'markdown-mode si prefieres
+  (setq gptel-directives '((default . "Eres una IA muy guay"))))
+
+;; accept completion from copilot and fallback to company
+(use-package! copilot
+  :hook (prog-mode . copilot-mode)
+  :bind (:map copilot-completion-map
+              ("<tab>" . 'copilot-accept-completion)
+              ("TAB" . 'copilot-accept-completion)
+              ("C-TAB" . 'copilot-accept-completion-by-word)
+              ("C-<tab>" . 'copilot-accept-completion-by-word)))
