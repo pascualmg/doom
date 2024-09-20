@@ -175,3 +175,10 @@
               ("TAB" . 'copilot-accept-completion)
               ("C-TAB" . 'copilot-accept-completion-by-word)
               ("C-<tab>" . 'copilot-accept-completion-by-word)))
+
+
+;; Enable automatic highlighting of the symbol under cursor
+(add-hook! 'prog-mode-hook #'highlight-symbol-mode)
+
+;; Set a shorter delay before the symbol gets highlighted
+(setq highlight-symbol-idle-delay 0.3)
