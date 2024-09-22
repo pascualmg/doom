@@ -36,20 +36,35 @@
 
 ;;
 ;;
-(when (display-graphic-p)
-  ;; Configuración solo para modo gráfico
-  (setq doom-font (font-spec :family "Hack" :size 14))
-  (setq doom-variable-pitch-font (font-spec :family "Avenir Next" :size 13))
-  (setq doom-unicode-font (font-spec :family "Apple Color Emoji"))
 
-  ;; Configuración específica para Haskell
-  (add-hook! 'haskell-mode-hook
-    (setq buffer-face-mode-face '(:family "Hasklug Nerd Font Mono"))
-    (buffer-face-mode +1)))
+(when (display-graphic-p)
+  ;;set a base size
+  (setq base-font-size 32)
+
+  (setq doom-font (font-spec :family "Hack Nerd Font" :size base-font-size)
+        doom-variable-pitch-font (font-spec :family "DejaVu Sans" :size 13)
+        doom-big-font (font-spec :family "Hack Nerd Font" :size 18))
+
+  ;; Configuración de respaldo si Hack no está disponible
+  (unless (find-font (font-spec :name "Hack Nerd Font"))
+    (setq doom-font (font-spec :family "DejaVu Sans Mono" :size 14)
+          doom-big-font (font-spec :family "DejaVu Sans Mono" :size 18)))
+
+  ;; Configuración específica para Haskell (opcional)
+  (add-hook 'haskell-mode-hook
+            (lambda ()
+              (setq buffer-face-mode-face '(:family "DejaVu Sans Mono"))
+              (buffer-face-mode +1))))
+
+  (use-package all-the-icons)
+
+
+;; Opcional: configurar una fuente específica para los símbolos si es necesario
+(setq doom-symbol-font (font-spec :family "Symbola" :size 14))
 
 ;; Mensaje para verificar la configuración actual de la fuente
-(add-hook! 'doom-init-ui-hook
-  (message "Valor actual de doom-font: %s" doom-font))
+(message "Valor actual de doom-font: %s" doom-font)
+
 (push '(fullscreen . maximized) initial-frame-alist)
 
 ;; Mensaje para verificar la configuración actual de la fuente
@@ -61,7 +76,11 @@
 
 ;; If you use `org' and don't want your org files in the default location below,
 ;; change `org-directory'. It must be set before org loads!
-(setq org-directory "~/Dropbox/org/")
+(setq org-directory "~/org/")
+
+;;https://www.orgroam.com/manual.html
+(setq org-roam-directory (file-truename "~/org/roam"))
+(org-roam-db-autosync-mode)
 
 
 ;; Whenever you reconfigure a package, make sure to wrap your config in an
@@ -132,8 +151,10 @@
               100)
          '(85 . 85) '(100 . 100)))))
 
-(global-set-key (kbd "C-c t") 'toggle-transparency)
-
+;; Keybinding para alternar la transparencia
+(map! :leader
+      :desc "Toggle transparency"
+      "t t" #'toggle-transparency)
 
 (after! haskell-mode
   (setq haskell-interactive-popup-errors nil))
@@ -165,7 +186,7 @@
                                          :models '("llama3.1:latest")))
   (setq gptel-model "llama3.1:latest")
   (setq gptel-default-mode 'org-mode)  ; O 'markdown-mode si prefieres
-  (setq gptel-directives '((default . "Eres una IA muy guay"))))
+  (setq gptel-directives '((default . "Eres un asistente AI especializado en Emacs Doom asi que tienes que proporcionar sus atajos , Haskell, y configuración de entornos de desarrollo para programadores. Tu objetivo es ayudar a los usuarios a aprender y dominar estas tecnologías, así como a integrarlas eficientemente con XMonad. Tienes conocimientos profundos sobre: 1. Emacs Doom: configuración y personalización, atajos de teclado y comandos útiles, plugins y extensiones populares, integración con lenguajes de programación. 2. Haskell: conceptos fundamentales de programación funcional, sintaxis y estructuras de datos, bibliotecas y frameworks comunes, patrones de diseño en Haskell. 3. XMonad: configuración básica y avanzada, integración con Emacs y otros programas, gestión eficiente de ventanas y espacios de trabajo. 4. Flujo de trabajo de desarrollo: mejores prácticas para combinar Emacs Doom, Haskell y XMonad, consejos de productividad y optimización del entorno. Proporciona explicaciones claras y concisas, ofrece ejemplos prácticos cuando sea apropiado, y sugiere recursos adicionales para aprendizaje. Adapta tus respuestas al nivel de experiencia del usuario, desde principiante hasta avanzado. Estás listo para responder preguntas, ofrecer tutoriales paso a paso, y ayudar a resolver problemas específicos relacionados con estas tecnologías"))))
 
 ;; accept completion from copilot and fallback to company
 (use-package! copilot
