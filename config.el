@@ -37,56 +37,145 @@
 ;;
 ;;
 
-;;; ~/.doom.d/fonts-config.el -*- lexical-binding: t; -*-
+;;; fonts-config.el -*- lexical-binding: t; -*-
 
+(require 'url)
+(require 'auth-source)
+
+;; Lista actualizada de Nerd Fonts con sus nombres correctos
+(defvar my-nerd-fonts
+  '("Hack Nerd Font" "0xProto Nerd Font" "3270 Nerd Font" "Agave Nerd Font"
+    "AnonymicePro Nerd Font" "Arimo Nerd Font" "AurulentSansMono Nerd Font"
+    "BigBlueTerminal Nerd Font" "Bitstream Vera Sans Mono Nerd Font"
+    "BlexMono Nerd Font" "Caskaydia Cove Nerd Font" "Cascadia Mono Nerd Font"
+    "CodeNewRoman Nerd Font" "ComicShannsMono Nerd Font" "CommitMono Nerd Font"
+    "Cousine Nerd Font" "D2Coding Nerd Font" "DaddyTimeMono Nerd Font"
+    "DejaVuSansMono Nerd Font" "DroidSansMono Nerd Font" "EnvyCodeR Nerd Font"
+    "FantasqueSansMono Nerd Font" "FiraCode Nerd Font" "FiraMono Nerd Font"
+    "GeistMono Nerd Font" "GoMono Nerd Font" "Gohu Nerd Font"
+    "Hasklug Nerd Font" "HeavyData Nerd Font" "Hurmit Nerd Font"
+    "iMWriting Nerd Font" "Inconsolata Nerd Font" "InconsolataGo Nerd Font"
+    "InconsolataLGC Nerd Font" "IntelOne Mono Nerd Font"
+    "Iosevka Nerd Font" "IosevkaTerm Nerd Font" "JetBrainsMono Nerd Font"
+    "Lekton Nerd Font" "LiterationMono Nerd Font" "Lilex Nerd Font"
+    "MartianMono Nerd Font" "Meslo Nerd Font" "Monaspace Nerd Font"
+    "Monofur Nerd Font" "Monoid Nerd Font" "Mononoki Nerd Font"
+    "MPlus Nerd Font" "Noto Nerd Font" "OpenDyslexic Nerd Font"
+    "Overpass Nerd Font" "ProFont Nerd Font" "ProggyClean Nerd Font"
+    "RobotoMono Nerd Font" "ShareTechMono Nerd Font" "SourceCodePro Nerd Font"
+    "SpaceMono Nerd Font" "Terminess Nerd Font" "Tinos Nerd Font"
+    "Ubuntu Nerd Font" "UbuntuMono Nerd Font" "VictorMono Nerd Font"))
+
+;; Lista de fuentes seguras
+(defvar safe-fonts
+  '("Hack Nerd Font" "DejaVu Sans Mono" "Courier New" "Consolas" "Monospace"))
+
+;; Función para verificar si una fuente está disponible
+(defun font-available-p (font-name)
+  (find-font (font-spec :name font-name)))
+
+;; Función para encontrar la primera fuente disponible de una lista
+(defun find-first-available-font (font-list)
+  (cl-find-if #'font-available-p font-list))
+
+;; Función para descargar e instalar una Nerd Font
+(defun download-and-install-nerd-font (font-name)
+  (let* ((github-font-name (replace-regexp-in-string " Nerd Font$" "" font-name))
+         (font-url (format "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/%s.zip" github-font-name))
+         (temp-file (make-temp-file "nerd-font-" nil ".zip"))
+         (font-dir (expand-file-name "~/.local/share/fonts/")))
+    (url-copy-file font-url temp-file t)
+    (make-directory font-dir t)
+    (call-process "unzip" nil nil nil "-o" temp-file "-d" font-dir)
+    (delete-file temp-file)
+    (message "Installed %s" font-name)
+    (when (eq system-type 'gnu/linux)
+      (call-process "fc-cache" nil nil nil "-f" "-v"))))
+
+;; Función interactiva para seleccionar y descargar una Nerd Font
+(defun select-and-install-nerd-font ()
+  (interactive)
+  (let ((chosen-font (completing-read "Choose a Nerd Font to install: " my-nerd-fonts)))
+    (when (yes-or-no-p (format "Download and install %s?" chosen-font))
+      (download-and-install-nerd-font chosen-font))))
+
+;; Configuración principal de fuentes
+(defun setup-fonts ()
+  (let* ((base-font-size 18)
+         (nerd-font (find-first-available-font my-nerd-fonts))
+         (safe-font (find-first-available-font safe-fonts))
+         (main-font-family (or nerd-font safe-font))
+         (variable-pitch-family "DejaVu Sans"))
+    (when main-font-family
+      (setq doom-font (font-spec :family main-font-family :size base-font-size)
+            doom-variable-pitch-font (font-spec :family variable-pitch-family :size base-font-size)
+            doom-big-font (font-spec :family main-font-family :size (* base-font-size 1.5))
+            doom-italic-font (font-spec :family main-font-family :slant 'italic :size base-font-size)
+            doom-bold-font (font-spec :family main-font-family :weight 'bold :size base-font-size))
+      (when (display-graphic-p)
+        (set-face-attribute 'default nil :font doom-font)
+        (set-face-attribute 'fixed-pitch nil :font doom-font)
+        (set-face-attribute 'variable-pitch nil :font doom-variable-pitch-font))
+      (message "Fuente principal configurada: %s" main-font-family)
+      (message "Valor actual de doom-font: %s" doom-font)
+      (message "Valor actual de doom-big-font: %s" doom-big-font))
+    (unless main-font-family
+      (message "No se encontró ninguna fuente adecuada. Usando configuración por defecto."))))
+
+;; Ejecutar la configuración de fuentes al cargar el archivo
+(setup-fonts)
+
+;; Función para cambiar la fuente interactivamente
+(defun change-font ()
+  (interactive)
+  (when (display-graphic-p)
+    (let* ((chosen-font (completing-read "Escoge una fuente: " my-nerd-fonts))
+           (base-font-size 14))
+      (if (font-available-p chosen-font)
+          (progn
+            (setq doom-font (font-spec :family chosen-font :size base-font-size)
+                  doom-big-font (font-spec :family chosen-font :size (* base-font-size 1.5))
+                  doom-variable-pitch-font (font-spec :family "DejaVu Sans" :size base-font-size))
+            (set-face-attribute 'default nil :font doom-font)
+            (set-face-attribute 'fixed-pitch nil :font doom-font)
+            (set-face-attribute 'variable-pitch nil :font doom-variable-pitch-font)
+            (message "Fuente cambiada a %s" chosen-font))
+        (if (yes-or-no-p (format "La fuente %s no está instalada. ¿Deseas descargarla e instalarla?" chosen-font))
+            (progn
+              (download-and-install-nerd-font chosen-font)
+              (change-font))
+          (message "La fuente %s no está disponible" chosen-font))))))
+
+;; Configuración de ligaduras
 (when (display-graphic-p)
-  ;; Establecer un tamaño base
-  (setq base-font-size 18)
+  (use-package! ligature
+    :config
+    (ligature-set-ligatures 't '("www" "**" "***" "**/" "*>" "*/" "\\\\" "\\\\\\" "{-" "::"
+                                 ":::" ":=" "!!" "!=" "!==" "-}" "----" "-->" "->" "->>"
+                                 "-<" "-<<" "-~" "#{" "#[" "##" "###" "####" "#(" "#?" "#_"
+                                 "#_(" ".-" ".=" ".." "..<" "..." "?=" "??" ";;" "/*" "/**"
+                                 "/=" "/==" "/>" "//" "///" "&&" "||" "||=" "|=" "|>" "^=" "$>"
+                                 "++" "+++" "+>" "=:=" "==" "===" "==>" "=>" "=>>" "<="
+                                 "=<<" "=/=" ">-" ">=" ">=>" ">>" ">>-" ">>=" ">>>" "<*"
+                                 "<*>" "<|" "<|>" "<$" "<$>" "<!--" "<-" "<--" "<->" "<+"
+                                 "<+>" "<=" "<==" "<=>" "<=<" "<>" "<<" "<<-" "<<=" "<<<"
+                                 "<~" "<~~" "</" "</>" "~@" "~-" "~>" "~~" "~~>" "%%"))
+    (global-ligature-mode t)))
 
-  ;; Función auxiliar para verificar si una fuente está disponible
-  (defun font-available-p (font-name)
-    (find-font (font-spec :name font-name)))
+;; Función para recargar las fuentes
+(defun reload-fonts ()
+  (interactive)
+  (when (display-graphic-p)
+    (setup-fonts)
+    (doom/reload-font)))
 
-  ;; Determinar qué fuente usar
-  (setq main-font-family (cond ((font-available-p "Monoid Nerd Font Mono") "Monoid Nerd Font Mono")
-                               ((font-available-p "Monoid Nerd Font") "Monoid Nerd Font")
-                               (t "Monoid")))
+;; Configuración de atajos de teclado
+(map! :leader
+      (:prefix ("t" . "toggle")
+       :desc "Change font" "a" #'change-font
+       :desc "Reload fonts" "A" #'reload-fonts
+       :desc "Install Nerd Font" "I" #'select-and-install-nerd-font))
 
-  ;; Configuración principal de fuentes
-  (setq doom-font (font-spec :family main-font-family :size base-font-size)
-        doom-variable-pitch-font (font-spec :family "DejaVu Sans" :size 13)
-        doom-big-font (font-spec :family main-font-family :size (* base-font-size 1.5)))
-
-  ;; Configurar las variantes de la fuente
-  (setq doom-italic-font (font-spec :family main-font-family :style "Italic" :size base-font-size)
-        doom-bold-font (font-spec :family main-font-family :style "Bold" :size base-font-size))
-
-  ;; Configuración específica para Haskell (si aún la necesitas)
-  (add-hook 'haskell-mode-hook
-            (lambda ()
-              (setq buffer-face-mode-face `(:family ,main-font-family))
-              (buffer-face-mode +1))))
-
-;; Habilitar ligaduras
-(use-package! ligature
-  :config
-  (ligature-set-ligatures 'prog-mode '("www" "**" "***" "**/" "*>" "*/" "\\\\" "\\\\\\" "{-" "::"
-                                       ":::" ":=" "!!" "!=" "!==" "-}" "----" "-->" "->" "->>"
-                                       "-<" "-<<" "-~" "#{" "#[" "##" "###" "####" "#(" "#?" "#_"
-                                       "#_(" ".-" ".=" ".." "..<" "..." "?=" "??" ";;" "/*" "/**"
-                                       "/=" "/==" "/>" "//" "///" "&&" "||" "||=" "|=" "|>" "^=" "$>"
-                                       "++" "+++" "+>" "=:=" "==" "===" "==>" "=>" "=>>" "<="
-                                       "=<<" "=/=" ">-" ">=" ">=>" ">>" ">>-" ">>=" ">>>" "<*"
-                                       "<*>" "<|" "<|>" "<$" "<$>" "<!--" "<-" "<--" "<->" "<+"
-                                       "<+>" "<=" "<==" "<=>" "<=<" "<>" "<<" "<<-" "<<=" "<<<"
-                                       "<~" "<~~" "</" "</>" "~@" "~-" "~>" "~~" "~~>" "%%"))
-  (global-ligature-mode t))
-
-;; Mensaje para verificar la configuración actual de la fuente
-(message "Fuente principal utilizada: %s" main-font-family)
-(message "Valor actual de doom-font: %s" doom-font)
-(message "Valor actual de doom-big-font: %s" doom-big-font);; numbers are disabled. For relative line numbers, set this to `relative'.
-(setq display-line-numbers-type t)
 
 ;; If you use `org' and don't want your org files in the default location below,
 ;; change `org-directory'. It must be set before org loads!
