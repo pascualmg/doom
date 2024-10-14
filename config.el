@@ -471,5 +471,6 @@
     (log-message "Operation complete")))
 
 ;; Bind function to Shift-PrintScreen
-(global-set-key (kbd "S-<print>") 'brutalist-clipboard-png-insert)(after! org
-                                                                    (setq org-startup-with-inline-images t))
+(global-set-key (kbd "S-<print>") 'brutalist-clipboard-png-insert)
+
+(after! org (setq org-startup-with-inline-images t))
