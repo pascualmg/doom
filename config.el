@@ -302,16 +302,22 @@
   (setq gptel-default-mode 'org-mode)  ; O 'markdown-mode si prefieres
   (setq gptel-directives '((default . "Eres un asistente AI especializado en Emacs Doom asi que tienes que proporcionar sus atajos , Haskell, y configuración de entornos de desarrollo para programadores. Tu objetivo es ayudar a los usuarios a aprender y dominar estas tecnologías, así como a integrarlas eficientemente con XMonad. Tienes conocimientos profundos sobre: 1. Emacs Doom: configuración y personalización, atajos de teclado y comandos útiles, plugins y extensiones populares, integración con lenguajes de programación. 2. Haskell: conceptos fundamentales de programación funcional, sintaxis y estructuras de datos, bibliotecas y frameworks comunes, patrones de diseño en Haskell. 3. XMonad: configuración básica y avanzada, integración con Emacs y otros programas, gestión eficiente de ventanas y espacios de trabajo. 4. Flujo de trabajo de desarrollo: mejores prácticas para combinar Emacs Doom, Haskell y XMonad, consejos de productividad y optimización del entorno. Proporciona explicaciones claras y concisas, ofrece ejemplos prácticos cuando sea apropiado, y sugiere recursos adicionales para aprendizaje. Adapta tus respuestas al nivel de experiencia del usuario, desde principiante hasta avanzado. Estás listo para responder preguntas, ofrecer tutoriales paso a paso, y ayudar a resolver problemas específicos relacionados con estas tecnologías"))))
 
-;; accept completion from copilot and fallback to company
+;; Configuración de Copilot para Doom Emacs
+
 (use-package! copilot
   :hook (prog-mode . copilot-mode)
   :bind (:map copilot-completion-map
               ("<tab>" . 'copilot-accept-completion)
               ("TAB" . 'copilot-accept-completion)
               ("C-TAB" . 'copilot-accept-completion-by-word)
-              ("C-<tab>" . 'copilot-accept-completion-by-word)))
+              ("C-<tab>" . 'copilot-accept-completion-by-word))
+  :config
+  (setq copilot-indent-offset 4)
+  ;; Activar Copilot globalmente
+  (global-copilot-mode))
 
-
+;; Descomenta la siguiente línea si necesitas habilitar el modo de depuración
+;; (setq copilot-debug t)
 
 ;;Ellama! escupe la flama
 
@@ -378,3 +384,94 @@
 
 ;; Si quieres usar Ellama en lugar de gptel, puedes comentar o eliminar la configuración de gptel
 ;; y usar esta configuración de Ellama en su lugar.
+;;
+
+;; Configuración de Org Journal para Doom Emacs
+(use-package! org-journal
+  :config
+  ;; Configuración básica
+  (setq org-journal-dir "~/org/journal/")
+  (setq org-journal-file-type 'monthly)
+  (setq org-journal-file-format "%Y%m.org")
+  (setq org-journal-date-format "%A, %d %B %Y")
+  (setq org-journal-time-format "%H:%M ")
+
+  ;; Encabezado de archivo y carry-over de tareas
+  (setq org-journal-file-header "#+TITLE: Journal %Y-%m\n")
+  (setq org-journal-carryover-items "TODO=\"TODO\"|TODO=\"IN-PROGRESS\"")
+
+  ;; Integración con la agenda y otras opciones
+  (setq org-journal-enable-agenda-integration t)
+  (setq org-journal-enable-encryption nil)
+  (setq org-journal-hide-entries-p nil)
+
+  ;; Asegurarse de que org-journal-dir exista
+  (make-directory org-journal-dir t)
+
+  ;; Opcional: Añadir archivos de journal a la lista de archivos de agenda
+  (setq org-agenda-files (append org-agenda-files (list org-journal-dir))))
+
+;; Configuración de keybindings para Doom Emacs
+(map! :leader
+      (:prefix ("j" . "journal")
+       :desc "New journal entry"     "j" #'org-journal-new-entry
+       :desc "Next journal entry"    "n" #'org-journal-open-next-entry
+       :desc "Previous journal entry" "p" #'org-journal-open-previous-entry
+       :desc "Search journal"        "s" #'org-journal-search))
+
+(setq projectile-project-search-path '("~/src/" "~/src/vocento" "~/"))
+(projectile-add-known-project "~/src/")
+(projectile-add-known-project "~/src/vocento")
+
+
+(defun brutalist-clipboard-png-insert ()
+  "Insert PNG image from clipboard into Org file as a link with robust error handling."
+  (interactive)
+  (let* ((timestamp (format-time-string "%Y%m%d_%H%M%S"))
+         (image-dir (expand-file-name "~/org/images/"))
+         (image-name (concat timestamp ".png"))
+         (image-path (expand-file-name image-name image-dir))
+         (log-file "~/brutalist-png-insert.log"))
+
+    (defun log-message (msg)
+      (append-to-file (concat msg "\n") nil log-file)
+      (message msg))
+
+    (log-message (format "--- New insertion attempt at %s ---" timestamp))
+    (log-message (format "Target directory: %s" image-dir))
+    (log-message (format "Target file: %s" image-path))
+
+    ;; Ensure directory exists
+    (unless (file-directory-p image-dir)
+      (condition-case err
+          (make-directory image-dir t)
+        (error
+         (log-message (format "Error creating directory: %s" err))
+         (error "Failed to create image directory: %s" err))))
+
+    (log-message "Directory check passed")
+
+    ;; Save PNG from clipboard directly
+    (let ((xclip-output
+           (with-temp-buffer
+             (let ((coding-system-for-read 'binary)
+                   (coding-system-for-write 'binary))
+               (unless (zerop (call-process "xclip" nil t nil "-selection" "clipboard" "-t" "image/png" "-o"))
+                 (log-message "xclip failed to output image data")
+                 (error "Failed to get PNG data from clipboard"))
+               (write-region (point-min) (point-max) image-path nil 'silent)
+               (buffer-string)))))
+
+      (if (and xclip-output (> (length xclip-output) 0))
+          (progn
+            (log-message (format "Image saved: %s (size: %d bytes)" image-path (length xclip-output)))
+            (insert (format "[[file:%s]]" image-path))
+            (message "Image inserted: %s" image-path))
+        (log-message "No image data received from xclip")
+        (error "No image data received from clipboard. Ensure you have a PNG image copied.")))
+
+    (log-message "Operation complete")))
+
+;; Bind function to Shift-PrintScreen
+(global-set-key (kbd "S-<print>") 'brutalist-clipboard-png-insert)(after! org
+                                                                    (setq org-startup-with-inline-images t))

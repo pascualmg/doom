@@ -114,7 +114,7 @@
        (:if IS-MAC macos)  ; improve compatibility with macOS
        tty               ; improve the terminal Emacs experience
 
-      :lang
+       :lang
        ;;agda              ; types of types of types of types...
        ;;beancount         ; mind the GAAP
        ;;(cc +lsp)         ; C > C++ == 1
@@ -155,7 +155,7 @@
        ;;nim               ; python + lisp at the speed of c
        nix               ; I hereby declare "nix geht mehr!"
        ;;ocaml             ; an objective camel
-       (org +lsp +roam2)   ; organize your plain life in plain text
+       (org +lsp +roam2 +journal)   ; organize your plain life in plain text
        (php +lsp)              ; perl's insecure younger brother
        plantuml          ; diagrams for confusing people more
        ;;purescript        ; javascript, but functional
