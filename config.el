@@ -312,9 +312,7 @@
               ("C-TAB" . 'copilot-accept-completion-by-word)
               ("C-<tab>" . 'copilot-accept-completion-by-word))
   :config
-  (setq copilot-indent-offset 4)
-  ;; Activar Copilot globalmente
-  (global-copilot-mode))
+  (setq copilot-indent-offset 4))
 
 ;; Descomenta la siguiente línea si necesitas habilitar el modo de depuración
 ;; (setq copilot-debug t)
