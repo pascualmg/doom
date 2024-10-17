@@ -395,8 +395,8 @@
   (setq org-journal-time-format "%H:%M ")
 
   ;; Encabezado de archivo y carry-over de tareas
-  (setq org-journal-file-header "#+TITLE: Journal %Y-%m\n")
-  (setq org-journal-carryover-items "TODO=\"TODO\"|TODO=\"IN-PROGRESS\"")
+  (setq org-journal-file-header "#+TITLE: Journal de passh %Y-%m\n")
+  (setq org-journal-carryover-items "TODO=\"TODO\"|TODO=\"IN-PROGRESS\"|TODO=\"IN-REVIEW\"|TODO=\"IN-TEST\"|TODO=\"DONE\"|TODO=\"CANCELLED\"|TODO=\"RELEASED\"|TODO=\"MERGED\"|TODO=\"DEPLOYED\"|TODO=\"CLOSED\"|TODO=\"REOPENED\"|TODO=\"REJECTED")
 
   ;; Integración con la agenda y otras opciones
   (setq org-journal-enable-agenda-integration t)
@@ -473,4 +473,5 @@
 ;; Bind function to Shift-PrintScreen
 (global-set-key (kbd "S-<print>") 'brutalist-clipboard-png-insert)
 
-(after! org (setq org-startup-with-inline-images t))
+(after! org
+  (setq org-startup-with-inline-images t))
