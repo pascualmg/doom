@@ -64,3 +64,20 @@
   :recipe (:host github :repo "copilot-emacs/copilot.el" :files ("*.el")))
 
 (package! all-the-icons)
+
+(package! org-gcal)
+
+;; Cliente HTTP principal
+(package! restclient)
+
+;; Integración con org-babel
+(package! ob-http)
+
+;; Cliente HTTP moderno (opcional pero recomendado)
+(package! verb)
+
+;; Formato automático de JSON (muy útil)
+(package! json-mode)
+
+;; Ayuda con company para restclient
+(package! company-restclient)

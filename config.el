@@ -182,18 +182,15 @@
 (setq org-directory "~/org/")
 
 ;; Esto para que cuando se exporte a HTML desde org se aplique la plantilla.
-(after! ox-html
-  (setq org-html-postamble nil)  ; Desactiva el postamble predeterminado
-  (setq org-html-head-include-default-style nil)  ; Opcional: desactiva el CSS predeterminado
-  (setq org-html-head-include-scripts nil)        ; Opcional: desactiva los scripts predeterminados
-  (setq org-html-htmlize-output-type 'css)        ; Usa CSS para el resaltado de sintaxis
-  (setq org-html-template "~/org/template_spacemacs.html"))
+(with-eval-after-load 'ox-html
+  (setq org-html-postamble nil
+        org-html-head-include-default-style nil
+        org-html-head-include-scripts nil
+        org-html-doctype "html5"
+        org-html-html5-fancy t
+        org-html-validation-link nil
+        org-html-template-default-path "/home/passh/org/template_spacemacs.html"))
 
-;; Asegúrate de que el archivo de plantilla existe
-(unless (file-exists-p "~/org/template_spacemacs.html")
-  (warn "El archivo de plantilla HTML no existe: ~/org/template_spacemacs.html"))
-;;https://www.orgroam.com/manual.html
-(setq org-roam-directory (file-truename "~/org/roam"))
 (org-roam-db-autosync-mode)
 
 
@@ -287,7 +284,10 @@
 (org-babel-do-load-languages
  'org-babel-load-languages
  '((emacs-lisp . t)
-   (haskell . t)))
+   (haskell . t)
+   (php . t)
+   (nix . t)
+   ))
 
 (setq org-babel-haskell-compiler "stack ghc --")
 
@@ -475,3 +475,31 @@
 
 (after! org
   (setq org-startup-with-inline-images t))
+
+;; Encriptemos
+;; Configuración básica para org-crypt en Doom Emacs
+(after! org
+  (require 'org-crypt)
+  (org-crypt-use-before-save-magic)
+
+  ;; No heredar la etiqueta :crypt:
+  (setq org-tags-exclude-from-inheritance '("crypt"))
+
+  ;; Tu key ID de GPG aquí
+  (setq org-crypt-key "85E4C775557B92E4")
+
+  ;; Limpiar buffer al cerrar
+  (add-hook! 'kill-buffer-hook
+    (defun +org-encrypt-on-save ()
+      (when (derived-mode-p 'org-mode)
+        (org-encrypt-entries)))))
+
+;; Shortcuts útiles para encriptar/desencriptar rápido
+(map! :after org
+      :map org-mode-map
+      :localleader
+      (:prefix ("e" . "encryption")
+               "e" #'org-encrypt-entry
+               "d" #'org-decrypt-entry
+               "E" #'org-encrypt-entries
+               "D" #'org-decrypt-entries))
