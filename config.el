@@ -495,11 +495,91 @@
         (org-encrypt-entries)))))
 
 ;; Shortcuts útiles para encriptar/desencriptar rápido
-(map! :after org
-      :map org-mode-map
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; (map! :after org                           ;;
+;;       :map org-mode-map                    ;;
+;;       :localleader                         ;;
+;;       (:prefix ("e" . "encryption")        ;;
+;;                "e" #'org-encrypt-entry     ;;
+;;                "d" #'org-decrypt-entry     ;;
+;;                "E" #'org-encrypt-entries   ;;
+;;                "D" #'org-decrypt-entries)) ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Configuración principal de LSP e Intelephense
+;; Configuración principal de LSP e Intelephense
+;; Configuración básica de LSP e Intelephense
+;; -*- lexical-binding: t; -*-
+(after! lsp-mode
+  ;; Ajustes críticos de rendimiento
+  (setq gc-cons-threshold (* 2 1024 1024 1024)) ;; 2GB
+  (setq read-process-output-max (* 1024 1024))  ;; 1MB
+  (setq lsp-idle-delay 0.5)
+  (setq lsp-log-io nil)  ;; Deshabilitar logs en producción
+
+  ;; Configuración específica de Intelephense
+  (setq lsp-intelephense-licence-key "002K3PRSEO670TI")
+  (setq lsp-intelephense-storage-path "~/.config/emacs/.local/cache/intelephense")
+
+  ;; Optimizaciones de rendimiento específicas
+  (setq lsp-enable-file-watchers nil)
+  (setq lsp-enable-folding nil)
+  (setq lsp-enable-links nil)
+  (setq lsp-enable-symbol-highlighting nil)
+  (setq lsp-enable-text-document-color nil)
+
+  ;; Ajustes de PHP y memoria
+  (setq lsp-intelephense-files-max-size 5000000)  ;; 5MB
+  (setq lsp-intelephense-max-memory 4096)         ;; 4GB para proyectos grandes
+  (setq lsp-intelephense-multi-root nil)          ;; Mejor rendimiento en proyectos únicos
+
+  ;; Configuración de ambiente PHP
+  (setq lsp-intelephense-environment-php-version "8.3")
+
+  ;; Personalización de completado
+  (setq lsp-intelephense-completion-insert-use-declarations t)
+  (setq lsp-intelephense-completion-fully-qualify-global-constants-and-functions nil)
+
+  ;; Configuración de diagnóstico
+  (setq lsp-intelephense-diagnostics-undefined-methods t)
+  (setq lsp-intelephense-diagnostics-undefined-functions t)
+  (setq lsp-intelephense-diagnostics-undefined-constants t)
+  (setq lsp-intelephense-diagnostics-undefined-classes t)
+  (setq lsp-intelephense-diagnostics-undefined-properties t)
+
+  ;; Telemetría y formato
+  (setq lsp-intelephense-telemetry-enabled nil)
+  (setq lsp-intelephense-format-enable t))
+
+;; Hooks y funciones de utilidad
+(defun force-intelephense-restart ()
+  "Fuerza un reinicio completo del servidor Intelephense"
+  (interactive)
+  (lsp-workspace-shutdown (lsp-workspaces))
+  (delete-directory (expand-file-name "~/.config/emacs/.local/cache/intelephense") t)
+  (garbage-collect)
+  (lsp))
+
+(defun toggle-intelephense-debug ()
+  "Alterna el modo debug de Intelephense"
+  (interactive)
+  (setq lsp-log-io (not lsp-log-io))
+  (message "Intelephense debug mode: %s" (if lsp-log-io "enabled" "disabled")))
+
+;; Hook específico para PHP
+(add-hook! php-mode
+  (setq-local lsp-enable-file-watchers nil)
+  (setq-local lsp-enable-indentation nil)  ;; Usar indentación nativa de php-mode
+  (lsp-deferred))
+
+;; Keybindings útiles
+(map! :after php-mode
+      :map php-mode-map
       :localleader
-      (:prefix ("e" . "encryption")
-               "e" #'org-encrypt-entry
-               "d" #'org-decrypt-entry
-               "E" #'org-encrypt-entries
-               "D" #'org-decrypt-entries))
+      (:prefix ("l" . "lsp")
+               "R" #'force-intelephense-restart
+               "d" #'toggle-intelephense-debug
+               "i" #'lsp-intelephense-index-workspace))
+
+;; Configuración de la caché
+(unless (file-directory-p "~/.config/emacs/.local/cache/intelephense")
+  (make-directory "~/.config/emacs/.local/cache/intelephense" t))

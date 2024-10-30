@@ -81,3 +81,6 @@
 
 ;; Ayuda con company para restclient
 (package! company-restclient)
+
+(package! lsp-mode)
+(package! php-mode)
