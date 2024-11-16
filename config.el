@@ -583,6 +583,7 @@
 ;; Configuración de la caché
 (unless (file-directory-p "~/.config/emacs/.local/cache/intelephense")
   (make-directory "~/.config/emacs/.local/cache/intelephense" t))
+
 ;; Añadir el perfil de usuario de Nix al PATH de Emacs
 (setenv "PATH" 
         (concat (getenv "HOME") "/.nix-profile/bin:"
