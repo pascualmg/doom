@@ -583,3 +583,36 @@
 ;; Configuración de la caché
 (unless (file-directory-p "~/.config/emacs/.local/cache/intelephense")
   (make-directory "~/.config/emacs/.local/cache/intelephense" t))
+;; Añadir el perfil de usuario de Nix al PATH de Emacs
+(setenv "PATH" 
+        (concat (getenv "HOME") "/.nix-profile/bin:"
+                "/run/current-system/sw/bin:"
+                (getenv "PATH")))
+
+;; Actualizar exec-path para que coincida con el nuevo PATH
+(setq exec-path 
+      (append (list
+               (concat (getenv "HOME") "/.nix-profile/bin")
+               "/run/current-system/sw/bin")
+              exec-path))
+
+;; Asegurar que Emacs puede encontrar los programas del usuario
+(when (and (getenv "HOME")
+           (file-directory-p (concat (getenv "HOME") "/.nix-profile/bin")))
+  (push (concat (getenv "HOME") "/.nix-profile/bin") exec-path))
+
+;; Configuración específica para compresión
+(setq compression-file-name-handler-alist
+      '(("\.gz\'" . gzip-file-handler)
+        ("\.bz2\'" . bzip2-file-handler)
+        ("\.xz\'" . xz-file-handler)
+        ("\.zip\'" . zip-file-handler)
+        ("\.Z\'" . compress-file-handler)))
+
+;; Función auxiliar para verificar la disponibilidad de comandos
+(defun verify-essential-commands ()
+  (interactive)
+  (dolist (cmd '("gzip" "git" "ripgrep" "fd"))
+    (message "%s path: %s"
+             cmd
+             (or (executable-find cmd) "NOT FOUND"))))
