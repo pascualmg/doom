@@ -180,6 +180,7 @@
 ;; If you use `org' and don't want your org files in the default location below,
 ;; change `org-directory'. It must be set before org loads!
 (setq org-directory "~/org/")
+(setq org-roam-directory "~/org/roam")
 
 ;; Esto para que cuando se exporte a HTML desde org se aplique la plantilla.
 (with-eval-after-load 'ox-html
@@ -311,10 +312,12 @@
               ("TAB" . 'copilot-accept-completion)
               ("C-TAB" . 'copilot-accept-completion-by-word)
               ("C-<tab>" . 'copilot-accept-completion-by-word))
+  :custom
+  (copilot-indent-offset-warning-disable t)    ;; Esta línea desactiva el warning
+  (copilot-idle-delay 0.1)                     ; Reducir delay para sugerencias más rápidas
+  (copilot-max-char 100000)
   :config
   (setq copilot-indent-offset 4))
-
-;; Descomenta la siguiente línea si necesitas habilitar el modo de depuración
 ;; (setq copilot-debug t)
 
 ;;Ellama! escupe la flama
