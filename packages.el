@@ -84,3 +84,4 @@
 
 (package! lsp-mode)
 (package! php-mode)
+(package! feature-mode)
