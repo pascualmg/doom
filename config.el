@@ -512,11 +512,11 @@
 (use-package! dape
   :config
   ;; PHP con Xdebug 3.x usando vscode-php-debug
-  ;; El adaptador se instala automáticamente si no existe
+  ;; NOTA: No usamos 'ensure' automático porque causa errores al cargar la config.
+  ;; Para instalar/reinstalar el adaptador manualmente: M-x dape-ensure-php-debug-adapter
   (add-to-list 'dape-configs
                `(phpListen
                  modes (php-mode)
-                 ensure dape-ensure-php-debug-adapter
                  command "node"
                  command-args (,(expand-file-name "~/.config/doom/debug-adapters/php-debug/extension/out/phpDebug.js"))
                  :type "php"
