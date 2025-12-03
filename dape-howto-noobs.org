@@ -1,0 +1,415 @@
+#+TITLE: Dape: Guía para Noobs
+#+AUTHOR: Documentación generada
+#+DATE: 2025-12-03
+
+#+begin_quote
+⚠️ *NOTA IMPORTANTE*: Esta guía es el resultado de debuggear dape hasta conseguir que funcionara.
+La instalación y configuración está *completamente automatizada* para que no tengas que sufrir lo mismo.
+Solo copia la config y funciona. 🎯
+#+end_quote
+
+* ¿Qué es Dape?
+
+*Dape* (Debug Adapter Protocol for Emacs) es un cliente de depuración para Emacs que implementa el *Debug Adapter Protocol (DAP)*.
+
+** ¿Qué es DAP?
+
+El *Debug Adapter Protocol* es un protocolo estándar creado por Microsoft para la depuración de código. Es como LSP (Language Server Protocol) pero para debugging en lugar de edición de código.
+
+*Ventaja principal*: Un único protocolo para depurar cualquier lenguaje. No necesitas aprender diferentes debuggers para cada lenguaje.
+
+* Dape vs dap-mode
+
+| Característica              | dape                          | dap-mode                      |
+|-----------------------------+-------------------------------+-------------------------------|
+| Mantenimiento               | Activo (2024)                 | Menos activo                  |
+| Instalación de adaptadores  | Manual                        | Semi-automática               |
+| Complejidad                 | Más simple, minimalista       | Más features, más complejo    |
+| UI                          | Minimalista, REPL-based       | UI más rica (buffers, panels) |
+| Dependencias                | Pocas                         | Muchas (lsp-mode, etc)        |
+| Rendimiento                 | Más rápido                    | Más pesado                    |
+| Filosofía                   | Unix-like: simple y explícito | Feature-rich                  |
+
+** ¿Cuándo usar dape?
+
+- Prefieres configuración explícita y simple
+- Quieres menos dependencias
+- Te gusta la filosofía minimalista
+- Eres nuevo en debugging con Emacs (menos overwhelming)
+
+** ¿Cuándo usar dap-mode?
+
+- Necesitas UI rica con muchos paneles
+- Quieres instalación más automática
+- Ya usas lsp-mode y su ecosistema
+- Necesitas features avanzadas específicas
+
+* El Rollo de los Adaptadores
+
+** ¿Qué es un Debug Adapter?
+
+Un *debug adapter* es un programa que actúa como intermediario entre:
+
+#+begin_src
+  Emacs (dape) <--DAP--> Debug Adapter <--protocolo específico--> Debugger Real
+#+end_src
+
+** ¿Por qué existen?
+
+Cada lenguaje tiene su propio debugger:
+- PHP → Xdebug
+- JavaScript → Chrome DevTools, Node debugger
+- Python → debugpy
+- Go → delve
+
+El Debug Adapter *traduce* entre el protocolo DAP (estándar) y el protocolo específico del debugger.
+
+** Ejemplo con PHP/Xdebug
+
+#+begin_src
+  Emacs + dape <--DAP--> vscode-php-debug <--DBGP--> Xdebug <--> PHP Runtime
+#+end_src
+
+1. *Xdebug* se ejecuta dentro de PHP y usa protocolo DBGP
+2. *vscode-php-debug* traduce DBGP ↔ DAP
+3. *dape* habla DAP con el adaptador
+4. *Tu* interactúas con dape en Emacs
+
+** ¿Por qué no directamente Emacs → Xdebug?
+
+Porque cada debugger tiene su propio protocolo:
+- Xdebug usa DBGP
+- GDB usa MI protocol
+- LLDB usa otro protocolo
+
+Con DAP, solo necesitas *un cliente* (dape) que hable *un protocolo* (DAP).
+
+* Instalación de Dape
+
+** 1. Instalar dape en Doom Emacs
+
+En =~/.doom.d/packages.el=:
+
+#+begin_src elisp
+(package! dape)
+#+end_src
+
+Luego: =doom sync=
+
+** 2. Configuración básica
+
+En =~/.doom.d/config.el=:
+
+#+begin_src elisp
+(use-package! dape
+  :config
+  ;; Aquí van tus configuraciones de adaptadores
+  )
+#+end_src
+
+* Instalación de Adaptadores
+
+** Proceso General
+
+1. *Descargar* el adaptador (usualmente archivo =.vsix= o binario)
+2. *Descomprimir* en directorio de adaptadores
+3. *Configurar* dape para encontrarlo
+
+** Directorio recomendado
+
+#+begin_src bash
+mkdir -p ~/.config/doom/debug-adapters
+#+end_src
+
+** Ejemplo: PHP/Xdebug (🎯 INSTALACIÓN AUTOMÁTICA)
+
+*** Paso 1: Añadir función de instalación automática
+
+En =~/.config/doom/config.el=:
+
+#+begin_src elisp
+;; Función para instalar vscode-php-debug automáticamente
+(defun dape-ensure-php-debug-adapter ()
+  "Instala vscode-php-debug adapter si no existe."
+  (let* ((adapter-dir (expand-file-name "~/.config/doom/debug-adapters/php-debug"))
+         (adapter-file (expand-file-name "extension/out/phpDebug.js" adapter-dir))
+         (download-url "https://github.com/xdebug/vscode-php-debug/releases/download/v1.35.0/php-debug-1.35.0.vsix")
+         (temp-file (make-temp-file "php-debug-" nil ".vsix")))
+
+    (unless (file-exists-p adapter-file)
+      (message "📦 Instalando vscode-php-debug adapter...")
+      (make-directory (expand-file-name "~/.config/doom/debug-adapters") t)
+      (url-copy-file download-url temp-file t)
+      (message "✓ Descargado adaptador")
+      (call-process "unzip" nil nil nil "-q" temp-file "-d" adapter-dir)
+      (delete-file temp-file)
+      (message "✓ Adaptador instalado en %s" adapter-dir)
+      (if (file-exists-p adapter-file)
+          (message "✅ vscode-php-debug adapter instalado correctamente")
+        (error "❌ Error instalando el adaptador")))
+    (file-exists-p adapter-file)))
+
+;; Comando para reinstalar si hace falta
+(defun dape-reinstall-php-debug-adapter ()
+  "Reinstala vscode-php-debug adapter forzosamente."
+  (interactive)
+  (let ((adapter-dir (expand-file-name "~/.config/doom/debug-adapters/php-debug")))
+    (when (file-exists-p adapter-dir)
+      (delete-directory adapter-dir t)
+      (message "🗑️  Adaptador anterior eliminado"))
+    (dape-ensure-php-debug-adapter)))
+#+end_src
+
+*** Paso 2: Configurar dape con instalación automática
+
+#+begin_src elisp
+(use-package! dape
+  :config
+  ;; PHP con Xdebug 3.x - El adaptador se instala automáticamente
+  (add-to-list 'dape-configs
+               `(phpListen
+                 modes (php-mode)
+                 ensure dape-ensure-php-debug-adapter  ;; ← Instalación automática
+                 command "node"
+                 command-args (,(expand-file-name "~/.config/doom/debug-adapters/php-debug/extension/out/phpDebug.js"))
+                 :type "php"
+                 :request "launch"
+                 :mode "listen"
+                 :port 9003)))
+#+end_src
+
+*IMPORTANTE*: El adaptador se descarga e instala automáticamente la primera vez que ejecutas =M-x dape=.
+
+*** Paso 3: Configurar Xdebug
+
+En tu =php.ini=:
+
+#+begin_src ini
+zend_extension=xdebug.so
+xdebug.mode=debug
+xdebug.start_with_request=yes
+xdebug.client_host=127.0.0.1
+xdebug.client_port=9003
+#+end_src
+
+* Uso Básico de Dape
+
+** Workflow típico
+
+1. *Abrir archivo* PHP en Emacs
+2. *Poner breakpoint*: =M-x dape-breakpoint-toggle= (o =SPC m d b= en Doom)
+3. *Iniciar dape*: =M-x dape= → seleccionar =phpListen=
+4. *Hacer request* a tu app PHP (curl, browser, etc)
+5. Emacs se *pausará en el breakpoint*
+
+** Comandos en el REPL de dape
+
+Una vez pausado en un breakpoint:
+
+| Comando    | Acción                               |
+|------------+--------------------------------------|
+| =next=     | Ejecutar siguiente línea (step over) |
+| =step=     | Entrar en función (step into)        |
+| =out=      | Salir de función (step out)          |
+| =continue= | Continuar ejecución                  |
+| =pause=    | Pausar ejecución                     |
+| =restart=  | Reiniciar sesión de debug            |
+| =quit=     | Terminar debug                       |
+
+** Inspeccionar variables
+
+En el REPL, puedes escribir:
+- Nombre de variable: =$myVar=
+- Expresiones: =$user->getName()=
+
+* Configuraciones para Otros Lenguajes
+
+** JavaScript/Node.js
+
+#+begin_src elisp
+(js-debug
+  modes (js-mode typescript-mode)
+  command "node"
+  command-args ("~/.config/doom/debug-adapters/js-debug/dapDebugServer.js")
+  port 8123
+  :type "node"
+  :request "launch"
+  :program "${file}")
+#+end_src
+
+** Python
+
+#+begin_src elisp
+(debugpy
+  modes (python-mode)
+  command "python"
+  command-args ("-m" "debugpy.adapter")
+  port 5678
+  :type "python"
+  :request "launch"
+  :program "${file}")
+#+end_src
+
+** Go (delve)
+
+#+begin_src elisp
+(dlv
+  modes (go-mode)
+  ensure dape-ensure-command
+  command "dlv"
+  command-args ("dap" "--listen" "127.0.0.1::autoport")
+  :type "go"
+  :request "launch"
+  :program ".")
+#+end_src
+
+* Keybindings Recomendados
+
+En =config.el=:
+
+#+begin_src elisp
+(map! :map php-mode-map
+      :localleader
+      (:prefix ("d" . "debug")
+       "d" #'dape
+       "b" #'dape-breakpoint-toggle
+       "n" #'dape-next
+       "s" #'dape-step-in
+       "o" #'dape-step-out
+       "c" #'dape-continue
+       "q" #'dape-quit
+       "r" #'dape-restart))
+#+end_src
+
+Entonces en un archivo PHP:
+- =SPC m d d= → Iniciar dape
+- =SPC m d b= → Toggle breakpoint
+- =SPC m d n= → Next (step over)
+- etc.
+
+* Instalación Automática de Adaptadores (RECOMENDADO)
+
+** ¿Por qué automatizar?
+
+La instalación manual de adaptadores es tediosa y propensa a errores. Con la función automática:
+
+- ✅ Se descarga e instala automáticamente al usar dape por primera vez
+- ✅ Verifica que el adaptador existe antes de usarlo
+- ✅ Fácil reinstalación si algo falla
+- ✅ Cero configuración manual
+
+** Cómo funciona
+
+La función =dape-ensure-php-debug-adapter= se ejecuta cuando:
+1. Intentas iniciar dape (=M-x dape=)
+2. El parámetro =ensure= en la config llama a la función
+3. La función verifica si existe el adaptador
+4. Si no existe, lo descarga e instala automáticamente
+
+** Comandos útiles
+
+- =M-x dape-reinstall-php-debug-adapter= - Reinstalar adaptador forzosamente
+- Útil si la instalación falló o hay una nueva versión
+
+** Estructura de directorios
+
+Después de la instalación automática:
+
+#+begin_src
+~/.config/doom/debug-adapters/
+└── php-debug/
+    ├── extension/
+    │   └── out/
+    │       └── phpDebug.js  ← El adaptador
+    └── ...
+#+end_src
+
+* Troubleshooting
+
+** "Adapter connection shutdown"
+
+Posibles causas:
+1. El adaptador no está instalado correctamente
+2. Node.js no está disponible
+3. Ruta incorrecta al adaptador
+4. El adaptador usa TCP en lugar de stdio
+
+Solución:
+#+begin_src bash
+# Verificar que node existe
+which node
+
+# Verificar que el adaptador existe
+ls ~/.config/doom/debug-adapters/php-debug/extension/out/phpDebug.js
+
+# Si no existe, reinstalar:
+# M-x dape-reinstall-php-debug-adapter
+
+# Verificar que Xdebug está cargado
+php -v | grep -i xdebug
+#+end_src
+
+*IMPORTANTE*: Asegúrate de que la configuración NO use =--server=9003= en =command-args=. El adaptador debe usar *stdio*, no modo servidor TCP.
+
+** Xdebug no se conecta
+
+#+begin_src bash
+# Ver logs de Xdebug
+tail -f /tmp/xdebug.log
+
+# Verificar que el puerto está abierto
+netstat -tuln | grep 9003
+#+end_src
+
+** Breakpoints no funcionan
+
+1. Asegúrate de que =xdebug.start_with_request=yes= en php.ini
+2. Verifica que el puerto coincide (9003)
+3. Comprueba path mappings si usas Docker
+
+* Recursos
+
+- [[https://github.com/svaante/dape][Dape en GitHub]]
+- [[https://microsoft.github.io/debug-adapter-protocol/][Debug Adapter Protocol Spec]]
+- [[https://xdebug.org/docs/][Xdebug Documentation]]
+- [[https://github.com/xdebug/vscode-php-debug][vscode-php-debug (el adaptador)]]
+
+* Ventajas de Dape sobre Depuración Tradicional
+
+** Sin dape (print debugging)
+
+#+begin_src php
+<?php
+echo "DEBUG: user = ";
+var_dump($user);  // ← Esto
+die();            // ← Y esto
+#+end_src
+
+Problemas:
+- Ensuciar código con prints
+- Reiniciar servidor cada vez
+- Ver solo lo que imprimiste
+- Olvidar quitar los prints
+
+** Con dape
+
+- Breakpoints temporales (no tocar código)
+- Inspeccionar *todas* las variables
+- Step through código línea por línea
+- Ver call stack completo
+- Evaluar expresiones on-the-fly
+
+* Filosofía de Dape
+
+Dape sigue la filosofía Unix:
+
+#+begin_quote
+"Do one thing and do it well"
+#+end_quote
+
+- *Minimalista*: Solo lo esencial para debugging
+- *Explícito*: Tú controlas todo, nada mágico
+- *Composable*: Se integra bien con otras herramientas de Emacs
+- *Extensible*: Fácil añadir nuevos lenguajes
+
+No intenta ser un IDE completo, solo un excelente debugger.

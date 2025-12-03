@@ -352,11 +352,6 @@
               lsp-enable-indentation nil)
   (lsp-deferred))
 
-;; --- Haskell ---
-(after! haskell-mode
-  (setq haskell-interactive-popup-errors nil
-        )
-  )
 ;; ════════════════════════════════════════════════════════════════════════════
 ;; HERRAMIENTAS DE DESARROLLO
 ;; ════════════════════════════════════════════════════════════════════════════
@@ -367,8 +362,7 @@
 (projectile-add-known-project "~/src/vocento")
 
 ;; --- Telega ---
-(setq telega-server-libs-prefix "/usr/local/lib/tdlib")
-
+(setq telega-server-libs-prefix "/nix/store/v314k2bmm149brgsmvaji1y9jl9x9n2p-tdlib-1.8.47")
 ;; --- GitHub Copilot ---
 (use-package! copilot
   :hook (prog-mode . copilot-mode)
@@ -444,6 +438,18 @@
 (global-set-key (kbd "S-<print>") 'brutalist-clipboard-png-insert)
 
 ;; ════════════════════════════════════════════════════════════════════════════
+;; CONFIGURACIÓN HASKELL + HLS
+;; ════════════════════════════════════════════════════════════════════════════
+
+;; Configuración mínima: Doom maneja todo automáticamente con +lsp +tree-sitter
+;; Ver guía completa de comandos en: ~/src/pensando-en-haskell/README.org
+;; Busca la sección "🎯 Doom Emacs: Guía Completa de Comandos"
+
+(after! lsp-haskell
+  ;; Solo configuramos fourmolu como formateador
+  (setq lsp-haskell-formatting-provider "fourmolu"))
+
+;; ════════════════════════════════════════════════════════════════════════════
 ;; CONFIGURACIÓN DE COMPRESIÓN
 ;; ════════════════════════════════════════════════════════════════════════════
 
@@ -453,5 +459,79 @@
         ("\\.xz\\'" . xz-file-handler)
         ("\\.zip\\'" . zip-file-handler)
         ("\\.Z\\'" . compress-file-handler)))
+
+
+;; ════════════════════════════════════════════════════════════════════════════
+;; DAP-MODE (DESHABILITADO - Usando dape en su lugar)
+;; ════════════════════════════════════════════════════════════════════════════
+;; (after! dap-mode
+;;   (setq dap-auto-configure-mode nil)
+;;   (setq dap-external-terminal '("alacritty" "--hold" "-e" ))
+;;   (setq dap-default-terminal-kind "external")
+;;   (require 'dap-php)
+;;   (setq dap-php-debug-port 9003)
+;;   (setq dap-php-executable "php"))
+;; (add-hook 'php-mode-hook #'dap-mode)
+
+
+;; ════════════════════════════════════════════════════════════════════════════
+;; DAPE - Debug Adapter Protocol
+;; ════════════════════════════════════════════════════════════════════════════
+
+;; Función para instalar vscode-php-debug automáticamente
+(defun dape-ensure-php-debug-adapter ()
+  "Instala vscode-php-debug adapter si no existe."
+  (let* ((adapter-dir (expand-file-name "~/.config/doom/debug-adapters/php-debug"))
+         (adapter-file (expand-file-name "extension/out/phpDebug.js" adapter-dir))
+         (download-url "https://github.com/xdebug/vscode-php-debug/releases/download/v1.35.0/php-debug-1.35.0.vsix")
+         (temp-file (make-temp-file "php-debug-" nil ".vsix")))
+
+    (unless (file-exists-p adapter-file)
+      (message "📦 Instalando vscode-php-debug adapter...")
+
+      ;; Crear directorio
+      (make-directory (expand-file-name "~/.config/doom/debug-adapters") t)
+
+      ;; Descargar .vsix
+      (url-copy-file download-url temp-file t)
+      (message "✓ Descargado adaptador")
+
+      ;; Descomprimir
+      (call-process "unzip" nil nil nil "-q" temp-file "-d" adapter-dir)
+      (delete-file temp-file)
+      (message "✓ Adaptador instalado en %s" adapter-dir)
+
+      ;; Verificar instalación
+      (if (file-exists-p adapter-file)
+          (message "✅ vscode-php-debug adapter instalado correctamente")
+        (error "❌ Error instalando el adaptador")))
+
+    ;; Retornar true si existe
+    (file-exists-p adapter-file)))
+
+(use-package! dape
+  :config
+  ;; PHP con Xdebug 3.x usando vscode-php-debug
+  ;; El adaptador se instala automáticamente si no existe
+  (add-to-list 'dape-configs
+               `(phpListen
+                 modes (php-mode)
+                 ensure dape-ensure-php-debug-adapter
+                 command "node"
+                 command-args (,(expand-file-name "~/.config/doom/debug-adapters/php-debug/extension/out/phpDebug.js"))
+                 :type "php"
+                 :request "launch"
+                 :mode "listen"
+                 :port 9003)))
+
+;; Comando interactivo para reinstalar el adaptador
+(defun dape-reinstall-php-debug-adapter ()
+  "Reinstala vscode-php-debug adapter forzosamente."
+  (interactive)
+  (let ((adapter-dir (expand-file-name "~/.config/doom/debug-adapters/php-debug")))
+    (when (file-exists-p adapter-dir)
+      (delete-directory adapter-dir t)
+      (message "🗑️  Adaptador anterior eliminado"))
+    (dape-ensure-php-debug-adapter)))
 
 ;;; config.el ends here
