@@ -361,6 +361,17 @@
 (projectile-add-known-project "~/src/")
 (projectile-add-known-project "~/src/vocento")
 
+;; Evitar que $HOME sea reconocido como project root (tiene .git)
+(after! projectile
+  (setq projectile-project-root-files-bottom-up
+        (remove ".git" projectile-project-root-files-bottom-up)))
+
+;; --- PlantUML ---
+;; Usar el ejecutable de NixOS en lugar del jar
+(after! plantuml-mode
+  (setq plantuml-executable-path "plantuml"
+        plantuml-default-exec-mode 'executable))
+
 ;; --- Telega ---
 (setq telega-server-libs-prefix "/nix/store/v314k2bmm149brgsmvaji1y9jl9x9n2p-tdlib-1.8.47")
 ;; --- GitHub Copilot ---
@@ -449,6 +460,7 @@
   ;; Solo configuramos fourmolu como formateador
   (setq lsp-haskell-formatting-provider "fourmolu"))
 
+(setq haskell-interactive-popup-errors nil) ; Deshabilitar popups de errores
 ;; ════════════════════════════════════════════════════════════════════════════
 ;; CONFIGURACIÓN DE COMPRESIÓN
 ;; ════════════════════════════════════════════════════════════════════════════
