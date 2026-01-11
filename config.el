@@ -462,6 +462,12 @@
 
 (setq haskell-interactive-popup-errors nil) ; Deshabilitar popups de errores
 ;; ════════════════════════════════════════════════════════════════════════════
+;; NIX-MODE FIX
+;; ════════════════════════════════════════════════════════════════════════════
+;; Fix: font-lock no se activa automáticamente en algunos casos
+(add-hook 'nix-mode-hook #'font-lock-ensure)
+
+;; ════════════════════════════════════════════════════════════════════════════
 ;; CONFIGURACIÓN DE COMPRESIÓN
 ;; ════════════════════════════════════════════════════════════════════════════
 
