@@ -45,23 +45,30 @@
 ;; INTERFAZ Y APARIENCIA
 ;; ════════════════════════════════════════════════════════════════════════════
 
-;; --- Transparencia ---
-(defun set-frame-transparency (alpha)
-  "Set frame transparency to ALPHA."
-  (set-frame-parameter (selected-frame) 'alpha alpha)
-  (add-to-list 'default-frame-alist `(alpha . ,alpha)))
+;; --- Transparencia (compatible PGTK/Wayland y X11) ---
+(defun set-frame-transparency (value)
+  "Set frame transparency to VALUE (0-100).
+En PGTK usa 'alpha-background, en X11 usa 'alpha."
+  (if (featurep 'pgtk)
+      ;; PGTK/Wayland: usa alpha-background con valor simple
+      (progn
+        (set-frame-parameter (selected-frame) 'alpha-background value)
+        (add-to-list 'default-frame-alist `(alpha-background . ,value)))
+    ;; X11: usa alpha con cons cell (active . inactive)
+    (let ((alpha-value (cons value value)))
+      (set-frame-parameter (selected-frame) 'alpha alpha-value)
+      (add-to-list 'default-frame-alist `(alpha . ,alpha-value)))))
 
-(set-frame-transparency '(85 . 85))
+(set-frame-transparency 85)
 
 (defun toggle-transparency ()
-  "Toggle between transparent and opaque."
+  "Toggle between transparent (85) and opaque (100)."
   (interactive)
-  (let* ((current-alpha (frame-parameter nil 'alpha))
-         (current-value (if (listp current-alpha) (car current-alpha) current-alpha)))
+  (let* ((param (if (featurep 'pgtk) 'alpha-background 'alpha))
+         (current (frame-parameter nil param))
+         (current-value (if (listp current) (car current) current)))
     (set-frame-transparency
-     (if (and current-value (< current-value 100))
-         '(100 . 100)
-       '(85 . 85)))))
+     (if (and current-value (< current-value 100)) 100 85))))
 
 ;; --- Configuración de Fuentes ---
 (require 'url)
