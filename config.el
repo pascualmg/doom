@@ -380,7 +380,8 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
         plantuml-default-exec-mode 'executable))
 
 ;; --- Telega ---
-(setq telega-server-libs-prefix "/nix/store/v314k2bmm149brgsmvaji1y9jl9x9n2p-tdlib-1.8.47")
+;; Usar variable de entorno para evitar hardcodear path de Nix store
+(setq telega-server-libs-prefix (getenv "TDLIB_PREFIX"))
 ;; --- GitHub Copilot ---
 (use-package! copilot
   :hook (prog-mode . copilot-mode)
