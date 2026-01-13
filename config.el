@@ -13,6 +13,9 @@
 (setq user-full-name "Pascual M.G."
       user-mail-address "info@pascualmg.dev")
 
+;; Silenciar warning de PGTK en X11 (funciona bien, solo avisa)
+(setq warning-minimum-level :emergency)
+
 ;; ════════════════════════════════════════════════════════════════════════════
 ;; SISTEMA Y PATHS (Nix Integration)
 ;; ════════════════════════════════════════════════════════════════════════════
@@ -145,7 +148,7 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
       (setq doom-font (font-spec :family main-font-family :size base-font-size)
             doom-variable-pitch-font (font-spec :family variable-pitch-family :size base-font-size)
             doom-big-font (font-spec :family main-font-family :size (* base-font-size 1.5))
-            doom-italic-font (font-spec :family main-font-family :slant 'italic :size base-font-size)
+            doom-italic-font (font-spec :family "VictorMono Nerd Font" :slant 'italic :size base-font-size)
             doom-bold-font (font-spec :family main-font-family :weight 'bold :size base-font-size))
       (when (display-graphic-p)
         (set-face-attribute 'default nil :font doom-font)
@@ -154,6 +157,12 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
       (message "Font configured: %s" main-font-family))))
 
 (setup-fonts)
+
+;; Comentarios y keywords en cursiva con Victor Mono
+(custom-set-faces!
+  '(font-lock-comment-face :family "VictorMono Nerd Font" :slant italic)
+  '(font-lock-doc-face :family "VictorMono Nerd Font" :slant italic)
+  '(font-lock-keyword-face :slant italic))
 
 (defun change-font ()
   "Interactively change the current font."
