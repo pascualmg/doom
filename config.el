@@ -376,11 +376,11 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
 (setq projectile-project-search-path '("~/src/" "~/src/vocento" "~/"))
 (projectile-add-known-project "~/src/")
 (projectile-add-known-project "~/src/vocento")
+(projectile-add-known-project "~/dotfiles/")
 
-;; Evitar que $HOME sea reconocido como project root (tiene .git)
+;; Ignorar $HOME como proyecto (tiene .git por los dotfiles)
 (after! projectile
-  (setq projectile-project-root-files-bottom-up
-        (remove ".git" projectile-project-root-files-bottom-up)))
+  (add-to-list 'projectile-ignored-projects (expand-file-name "~/")))
 
 ;; --- PlantUML ---
 ;; Usar el ejecutable de NixOS en lugar del jar
@@ -544,8 +544,17 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
     ;; Retornar true si existe
     (file-exists-p adapter-file)))
 
+;; Flycheck haskell-stack-ghc no usa nuestro proyecto (cabal-based) y
+;; ademas peta con caracteres unicode en el codigo. Desactivado.
+(after! flycheck
+  (add-to-list 'flycheck-disabled-checkers 'haskell-stack-ghc))
+
 (use-package! dape
   :config
+  ;; hdb (Haskell Debugger) en el primer launch tarda 15-30s descubriendo
+  ;; flags via hie-bios + cabal path + ghc --print-libdir. Default 10s
+  ;; mata la conexion antes de que hdb conteste.
+  (setq dape-request-timeout 60)
   ;; PHP con Xdebug 3.x usando vscode-php-debug
   ;; NOTA: No usamos 'ensure' automático porque causa errores al cargar la config.
   ;; Para instalar/reinstalar el adaptador manualmente: M-x dape-ensure-php-debug-adapter
@@ -557,7 +566,49 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
                  :type "php"
                  :request "launch"
                  :mode "listen"
-                 :port 9003)))
+                 :port 9003))
+
+  ;; Haskell con hdb (DAP debugger de Well-Typed, requiere GHC 9.14+)
+  ;;
+  ;; Como funciona (replica lo que la extension VSCode oficial hace):
+  ;;   1. dape pide un puerto libre (autoport).
+  ;;   2. Lanza `hdb-dap server --port <port>` (wrapper que entra en
+  ;;      `nix develop` antes de hdb, asegurando GHC 9.14 en PATH).
+  ;;   3. dape conecta TCP a localhost:<port>.
+  ;;   4. Manda launch request con projectRoot + entryFile + entryPoint.
+  ;;
+  ;; Instalacion previa (una sola vez):
+  ;;   cd <proyecto-haskell-con-flake> && nix develop
+  ;;   cabal install haskell-debugger --installdir=$HOME/.local/bin
+  ;;   (el wrapper hdb-dap esta en dotfiles, ya en PATH)
+  (add-to-list 'dape-configs
+               `(haskell-hdb
+                 modes (haskell-mode haskell-ts-mode haskell-cabal-mode)
+                 ensure (lambda (config)
+                          (unless (executable-find "hdb")
+                            (user-error
+                             "hdb no encontrado en PATH. Verifica ~/.local/bin/hdb")))
+                 fn (dape-config-autoport)
+                 host "localhost"
+                 port :autoport
+                 command "hdb"
+                 command-args ("server" "--port" :autoport)
+                 :type "haskell-debugger"
+                 :request "launch"
+                 :projectRoot dape-cwd-fn
+                 :entryFile dape-buffer-default
+                 :entryPoint "main"
+                 :entryArgs []
+                 :extraGhcArgs []
+                 ;; internal-interpreter = true: usa el interprete GHCi
+                 ;; embebido en el proceso hdb en lugar de spawnar un
+                 ;; subprocess externo. Cada launch arranca mas rapido
+                 ;; al saltarse la sincronizacion via pipes con el proceso
+                 ;; externo. Trade-off: el debuggee comparte la heap del
+                 ;; debugger, lo cual va bien para programas pequenos
+                 ;; (este Debugging101 lo es). Para programas grandes
+                 ;; volver a nil.
+                 :internalInterpreter t)))
 
 ;; Comando interactivo para reinstalar el adaptador
 (defun dape-reinstall-php-debug-adapter ()
