@@ -309,6 +309,35 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
 (after! php-mode
   (setq php-mode-coding-style 'psr2))
 
+;; Lee la licencia de Intelephense. Orden: agenix -> pass -> warning.
+;; NUNCA hardcodear la key aqui (el repo es publico).
+;;   1. agenix: ~/dotfiles/secrets/intelephense-license.age (declarativo,
+;;      replica clone-first, descifra con ssh key del usuario).
+;;   2. pass:   personal/intelephense-license (gpg, fuente activa).
+;;   3. nil + message de aviso.
+(defun my/get-intelephense-key ()
+  "Obtiene la licencia de Intelephense (agenix -> pass -> nil + warn)."
+  (let* ((secrets-dir (expand-file-name "~/dotfiles/secrets/"))
+         (age-file (expand-file-name "intelephense-license.age" secrets-dir))
+         (key (or
+               ;; 1. agenix (necesita cwd = dir de secrets.nix)
+               (and (executable-find "agenix")
+                    (file-readable-p age-file)
+                    (let* ((default-directory secrets-dir)
+                           (out (string-trim
+                                 (shell-command-to-string
+                                  "agenix -d intelephense-license.age 2>/dev/null | head -1"))))
+                      (and (not (string-empty-p out)) out)))
+               ;; 2. pass
+               (and (executable-find "pass")
+                    (let ((out (string-trim
+                                (shell-command-to-string
+                                 "pass show personal/intelephense-license 2>/dev/null | head -1"))))
+                      (and (not (string-empty-p out)) out))))))
+    (unless key
+      (message "[intelephense] Key no encontrada (ni agenix ni pass). LSP arrancara sin licencia premium."))
+    key))
+
 (after! lsp-mode
   ;; Rendimiento crítico
   (setq gc-cons-threshold (* 2 1024 1024 1024)  ; 2GB durante LSP
@@ -317,7 +346,7 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
         lsp-log-io nil)  ; Activar solo para debug
 
   ;; Configuración de Intelephense
-  (setq lsp-intelephense-licence-key "002K3PRSEO670TI"
+  (setq lsp-intelephense-licence-key (or (my/get-intelephense-key) "")
         lsp-intelephense-storage-path (expand-file-name "~/.config/emacs/.local/cache/intelephense")
         lsp-intelephense-files-max-size 5000000  ; 5MB
         lsp-intelephense-max-memory 4096         ; 4GB
