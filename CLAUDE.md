@@ -39,6 +39,85 @@ Binario Doom: `~/.config/emacs/bin/doom` (vendor en `~/.config/emacs/`).
 M-x doom/reload                     # tras editar config.el (sin reiniciar)
 ```
 
+## Control del daemon vivo (clave para Claude)
+
+Pascual tiene Emacs como daemon (`emacs --daemon`, normalmente lanzado por
+systemd user service o al login). Esto significa que **puedo verificar
+cambios en vivo via `emacsclient --eval`** sin pedirle que reinicie nada.
+
+### Comandos canonicos
+
+```bash
+# Ping al server
+emacsclient --eval "(emacs-version)"
+
+# Cargar el config.el modificado (recarga las funciones nuevas)
+emacsclient --eval "(load (expand-file-name \"config.el\" doom-user-dir))"
+
+# Comprobar que una funcion existe
+emacsclient --eval "(fboundp 'my/funcion)"
+
+# Ejecutar y ver resultado
+emacsclient --eval "(my/funcion arg)"
+
+# Leer los ultimos N caracteres de *Messages* (errores, warnings)
+emacsclient --eval "(with-current-buffer \"*Messages*\" \
+  (buffer-substring-no-properties \
+    (max (point-min) (- (point-max) 2000)) (point-max)))"
+
+# Forzar carga de un paquete lazy
+emacsclient --eval "(require 'lsp-mode)"
+
+# Ver si un paquete esta cargado
+emacsclient --eval "(featurep 'lsp-mode)"
+
+# Abrir un fichero sin robar foco (para forzar arranque LSP, p.ej.)
+emacsclient -n /ruta/al/fichero.php
+```
+
+### CUIDADO con `doom/reload`
+
+`emacsclient --eval "(doom/reload)"` **NO funciona como esperarias** desde
+shell: lanza un proceso async de compilacion y vuelve antes de terminar.
+Para verificar cambios en `config.el` usar siempre el `(load ...)` directo.
+
+`doom/reload` solo es util cuando hay cambios estructurales (init.el o
+packages.el) y necesita reiniciarse el daemon de todas formas.
+
+### Loop de verificacion canonico (Claude)
+
+Tras editar `config.el`:
+
+1. Hacer el cambio con Edit/Write.
+2. `emacsclient --eval "(load (expand-file-name \"config.el\" doom-user-dir))"`
+   - Si devuelve `t`: cargo OK.
+   - Si devuelve string con error: leer y corregir.
+3. `emacsclient --eval "(fboundp 'my/funcion-cambiada)"` -> `t`.
+4. `emacsclient --eval "(my/funcion-cambiada ...)"` -> verificar valor.
+5. Leer ultimos 2KB de `*Messages*` por warnings.
+6. Reportar OK/NOK a Pascual.
+
+Tras editar `init.el` o `packages.el`:
+
+1. Hacer el cambio.
+2. `~/.config/emacs/bin/doom sync` (puede tardar minutos).
+3. Avisar a Pascual: necesita reiniciar daemon
+   (`systemctl --user restart emacs` o `pkill emacs && emacs --daemon`).
+4. Tras reinicio: loop de verificacion como arriba.
+
+### Lo que NO puedo hacer
+
+- **Ver la pantalla**: no se que tiene visible. Si necesito saberlo,
+  preguntar por buffer/window: `(buffer-name)`, `(window-list)`,
+  `(frame-list)`.
+- **Interactuar con minibuffer prompts**: si una funcion pide input
+  interactivo (y--n--p, completing-read), se queda colgada y emacsclient
+  no devuelve.
+- **Deshacer cagadas en buffers vivos**: si meto la pata en un buffer
+  abierto, Pascual tiene que `C-/` el mismo.
+- **Reiniciar el daemon sin avisar**: tira todos los frames. Solo con
+  permiso explicito.
+
 ## Modulos Doom relevantes
 
 Lista completa en `init.el`. Lo importante:
@@ -290,11 +369,15 @@ Decidir activar/desactivar:
 
 ## Notas para Claude
 
+- **Tienes daemon vivo a tu alcance**: usa `emacsclient --eval` para
+  verificar TODO lo que toques (ver seccion "Control del daemon vivo").
+  No reportes "deberia funcionar" sin verificar - se puede comprobar.
 - Cuando edites `config.el`, ten en cuenta que Doom carga `custom.el`
   DESPUES. Setq en custom.el pisa lo de config.el.
 - Si tocas init.el o packages.el, recordar a Pascual ejecutar
   `~/.config/emacs/bin/doom sync` antes de reiniciar.
-- Cambios pequenos: `M-x doom/reload` o `SPC h r r`.
+- Para recargar config.el en vivo: `(load (expand-file-name "config.el"
+  doom-user-dir))` via emacsclient. NO uses `(doom/reload)` desde shell.
 - No commitear ni pushear sin pedir explicitamente.
 - Stealth mode: commits SIN `Co-Authored-By` ni firmas de Claude.
 - En PRs/issues del repo doom, Pascual es el unico author publico.
