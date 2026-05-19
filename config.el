@@ -144,11 +144,16 @@ Para anadir mas para el selector interactivo: `change-font'.")
 
 (setup-fonts)
 
-;; Comentarios y keywords en cursiva con Victor Mono
+;; Comentarios y keywords en cursiva con Victor Mono.
+;; Linea de ejecucion en dape: magenta Spacemacs, fondo solido,
+;; texto blanco bold. :extend t para que ocupe toda la linea.
 (custom-set-faces!
   '(font-lock-comment-face :family "VictorMono Nerd Font" :slant italic)
   '(font-lock-doc-face :family "VictorMono Nerd Font" :slant italic)
-  '(font-lock-keyword-face :slant italic))
+  '(font-lock-keyword-face :slant italic)
+  '(dape-source-line-face
+    :background "#bc6ec5" :foreground "#ffffff"
+    :weight bold :extend t))
 
 (defun change-font ()
   "Interactively change the current font."
@@ -567,6 +572,17 @@ Para anadir mas para el selector interactivo: `change-font'.")
 
     ;; Retornar true si existe
     (file-exists-p adapter-file)))
+
+;; Atajos dape estilo IntelliJ IDEA. Globales y unbound previamente.
+;; Solo hacen algo cuando hay sesion de debug activa - si no, dan
+;; "No active debug session" sin romper nada.
+(map! "<f7>"   #'dape-step-in              ; IntelliJ F7      (entra en funcion)
+      "<f8>"   #'dape-next                 ; IntelliJ F8      (step over)
+      "<S-f8>" #'dape-step-out             ; IntelliJ Shift+F8 (sale de funcion)
+      "<f9>"   #'dape-continue             ; IntelliJ F9      (resume)
+      "<C-f8>" #'dape-breakpoint-toggle    ; IntelliJ Ctrl+F8 (toggle breakpoint)
+      "<C-f2>" #'dape-quit                 ; IntelliJ Ctrl+F2 (stop)
+      "<M-f8>" #'dape-evaluate-expression) ; IntelliJ Alt+F8  (evaluate expression)
 
 (use-package! dape
   :config
