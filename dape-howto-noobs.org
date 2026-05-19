@@ -287,6 +287,214 @@ Entonces en un archivo PHP:
 - =SPC m d n= → Next (step over)
 - etc.
 
+** Atajos estilo IntelliJ (añadido 2026-05-19)
+
+Para no cambiar el mapa mental viniendo de IntelliJ/PhpStorm, hay
+atajos globales que reproducen las F-keys clásicas:
+
+| Tecla        | Acción                  | Equivalente IntelliJ      |
+|--------------+-------------------------+---------------------------|
+| =F7=         | =dape-step-in=          | Step Into                 |
+| =F8=         | =dape-next= (step over) | Step Over                 |
+| =Shift+F8=   | =dape-step-out=         | Step Out                  |
+| =F9=         | =dape-continue=         | Resume Program            |
+| =Ctrl+F8=    | =dape-breakpoint-toggle=| Toggle Line Breakpoint    |
+| =Ctrl+F2=    | =dape-quit=             | Stop                      |
+| =Alt+F8=     | =dape-evaluate-expression= | Evaluate Expression    |
+
+Las funciones =dape-*= dan =No active debug session= si no hay sesión
+abierta, así que pulsarlas sin querer NO rompe nada.
+
+En =config.el=:
+
+#+begin_src elisp
+(map! "<f7>"   #'dape-step-in
+      "<f8>"   #'dape-next
+      "<S-f8>" #'dape-step-out
+      "<f9>"   #'dape-continue
+      "<C-f8>" #'dape-breakpoint-toggle
+      "<C-f2>" #'dape-quit
+      "<M-f8>" #'dape-evaluate-expression)
+#+end_src
+
+* Personalización visual
+
+** Línea de ejecución: magenta Spacemacs
+
+Por defecto dape usa la cara =dape-source-line-face= sin definir
+(=unspecified=) → hereda del tema y resulta casi invisible. La
+customización añade un magenta sólido al estilo Spacemacs:
+
+#+begin_src elisp
+(custom-set-faces!
+  '(dape-source-line-face
+    :background "#bc6ec5" :foreground "#ffffff"
+    :weight bold :extend t))
+#+end_src
+
+=:extend t= hace que el fondo se extienda a todo el ancho de la línea,
+no solo al texto. Tonos alternativos:
+
+| Color       | Sensación               |
+|-------------+-------------------------|
+| =#bc6ec5=   | magenta Spacemacs       |
+| =#d33682=   | magenta Solarized       |
+| =#c678dd=   | púrpura Doom One        |
+| =#ff5fff=   | magenta neón (muy duro) |
+
+Para cambiarlo en caliente sin recargar:
+=M-x set-face-attribute= → =dape-source-line-face= → atributos.
+
+* El flow completo: qué pasa cuando pulsas F8
+
+La cadena de procesos y mensajes:
+
+#+begin_src
+F8 (key-binding)
+  → dape-next (función elisp)
+  → dape envía DAP "next" al adapter por stdin/stdout
+       {"command": "next", "arguments": {"threadId": 1}}
+       ↓
+  → adapter (phpDebug.js) recibe DAP
+  → adapter traduce a DBGp "step_over"
+       step_over -i 42
+       ↓
+  → xdebug.so (cargado dentro del proceso PHP) recibe DBGp por TCP
+  → Xdebug ejecuta UNA línea y se para
+  → Xdebug envía DBGp "response" al adapter
+       <response status="break" line="123" filename="..."/>
+       ↓
+  → adapter traduce a DAP "stopped event"
+       {"event": "stopped", "reason": "step", "threadId": 1}
+       ↓
+  → dape recibe el event
+  → dape mueve el cursor a línea 123 del fichero
+  → dape pinta el overlay magenta
+  → dape refresca el buffer *dape-info* con variables/stack/threads
+#+end_src
+
+Todo en menos de 50ms. Esa fluidez es DAP.
+
+** El árbol de procesos durante un debug
+
+#+begin_src
+emacs --daemon (PID padre)
+ │
+ ├── node phpDebug.js  ← spawneado por dape al pulsar M-x dape
+ │   └── escucha en 127.0.0.1:9003 (TCP) hablando DBGp
+ │
+ └── (otra ventana del usuario, terminal/vterm)
+      direnv → nix shell → php bin/console foo
+                            └── xdebug.so cargado
+                                  → conecta a :9003
+                                  → habla DBGp con phpDebug.js
+#+end_src
+
+*Punto clave*: dape NO lanza el código PHP. Tú lo lanzas en tu
+terminal. dape solo escucha. Modelo "passive listen": el debugger
+viene a mí. IntelliJ es lo mismo por debajo, pero te lo unifica.
+
+* Workflow real con direnv (Vocento)
+
+Asumiendo proyecto tipo =~/src/vocento/php-service.user-identity= con
+=.envrc= = =use flake= y el =flake.nix= configurando =xdebug.mode=debug=
+y =xdebug.start_with_request=yes=.
+
+** Paso a paso
+
+1. *Tener IntelliJ con el listener APAGADO*. Solo un proceso puede usar
+   el puerto 9003. Si IntelliJ tiene activado "Listen for PHP Debug
+   Connections" (el iconito del bicho en la esquina), apágalo.
+
+2. En Emacs: =SPC p p= → eliges el proyecto → te lleva al directorio.
+
+3. Abrir el fichero PHP donde quieres parar (controller, command, etc).
+   Pon el cursor en la línea exacta y pulsa =Ctrl+F8= o
+   =M-x dape-breakpoint-toggle=. Verás un círculo en el margen.
+
+4. =M-x dape= → te pide config → escribe =phpListen= → Enter. Emacs
+   queda escuchando en 9003. Verás un buffer =*dape-info*= o similar.
+
+5. En tu terminal (con el direnv ya activo, ergo =php= y =xdebug=
+   cargados), ejecuta lo que dispare el código:
+
+   - CLI: =php bin/console alguna:cosa=
+   - HTTP: levanta el server y haz =curl http://...= o request desde
+     navegador.
+   - Tests: =vendor/bin/phpunit --filter ...=
+
+6. Xdebug conecta automáticamente a 9003 (gracias a
+   =start_with_request=yes=). Emacs salta al breakpoint con la línea
+   marcada en magenta.
+
+7. F7/F8/F9/Shift+F8 para navegar. Alt+F8 para evaluar expresiones.
+
+* Diagnóstico desde Emacs vivo
+
+Si algo no funciona, NO recargues Emacs entero. Usa =emacsclient --eval=
+desde shell para inspeccionar el daemon vivo:
+
+** ¿dape está cargado?
+
+#+begin_src bash
+emacsclient --eval "(fboundp 'dape)"
+# Debe devolver: t
+#+end_src
+
+** ¿La config phpListen sigue ahí?
+
+#+begin_src bash
+emacsclient --eval "(assq 'phpListen dape-configs)"
+# Debe devolver la tupla con :port 9003 y la ruta del adapter.
+#+end_src
+
+** ¿El adapter existe en disco?
+
+#+begin_src bash
+ls -la ~/.config/doom/debug-adapters/php-debug/extension/out/phpDebug.js
+#+end_src
+
+** ¿Hay alguien escuchando en 9003?
+
+#+begin_src bash
+ss -lntp | grep 9003
+# Si sale algo con node = phpDebug.js corriendo (dape activo).
+# Si sale algo con java = IntelliJ acaparando. Apágalo.
+# Si no sale nada y dape está supuestamente activo = dape mal arrancado.
+#+end_src
+
+** ¿Xdebug está conectando?
+
+#+begin_src bash
+# El flake configuró log en /tmp/xdebug.log con log_level=7 (verboso).
+tail -f /tmp/xdebug.log
+
+# Lineas tipicas:
+#   [Step Debug] INFO: Connecting to configured address/port: 127.0.0.1:9003
+#   [Step Debug] INFO: Connected to debugging client: 127.0.0.1:9003
+#+end_src
+
+Si ves "Could not connect" repetidamente: nadie escucha en 9003, o
+firewall, o puerto mal configurado.
+
+* Conflicto frecuente: puerto 9003 ocupado
+
+El puerto 9003 lo escucha *uno y solo uno* en cada momento:
+
+| Quien                | Cuando                                |
+|----------------------+---------------------------------------|
+| IntelliJ / PhpStorm  | con "Listen for PHP Connections" ON   |
+| VSCode + PHP Debug   | con sesión de debug PHP arrancada     |
+| dape (Emacs)         | tras =M-x dape= con =phpListen=       |
+| nada                 | el resto del tiempo                   |
+
+Si lanzas =dape= y el puerto está ocupado, dape falla silencioso o con
+"address already in use". Soluciones:
+
+- Apagar el listener del otro IDE.
+- O cambiar el puerto en =flake.nix= (=xdebug.client_port=) y en la
+  config dape (=:port=), pero sincronizar ambos lados.
+
 * Instalación Automática de Adaptadores (RECOMENDADO)
 
 ** ¿Por qué automatizar?
