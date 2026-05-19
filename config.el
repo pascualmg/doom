@@ -78,29 +78,15 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
 (require 'auth-source)
 
 (defvar my-nerd-fonts
-  '("Hack Nerd Font" "JetBrainsMono Nerd Font" "FiraCode Nerd Font"
-    "Iosevka Nerd Font" "CaskaydiaCove Nerd Font" "VictorMono Nerd Font"
-    "0xProto Nerd Font" "3270 Nerd Font" "Agave Nerd Font"
-    "AnonymicePro Nerd Font" "Arimo Nerd Font" "AurulentSansMono Nerd Font"
-    "BigBlueTerminal Nerd Font" "Bitstream Vera Sans Mono Nerd Font"
-    "BlexMono Nerd Font" "Cascadia Mono Nerd Font"
-    "CodeNewRoman Nerd Font" "ComicShannsMono Nerd Font" "CommitMono Nerd Font"
-    "Cousine Nerd Font" "D2Coding Nerd Font" "DaddyTimeMono Nerd Font"
-    "DejaVuSansMono Nerd Font" "DroidSansMono Nerd Font" "EnvyCodeR Nerd Font"
-    "FantasqueSansMono Nerd Font" "FiraMono Nerd Font"
-    "GeistMono Nerd Font" "GoMono Nerd Font" "Gohu Nerd Font"
-    "Hasklug Nerd Font" "HeavyData Nerd Font" "Hurmit Nerd Font"
-    "iMWriting Nerd Font" "Inconsolata Nerd Font" "InconsolataGo Nerd Font"
-    "InconsolataLGC Nerd Font" "IntelOne Mono Nerd Font"
-    "IosevkaTerm Nerd Font" "Lekton Nerd Font" "LiterationMono Nerd Font"
-    "Lilex Nerd Font" "MartianMono Nerd Font" "Meslo Nerd Font"
-    "Monaspace Nerd Font" "Monofur Nerd Font" "Monoid Nerd Font"
-    "Mononoki Nerd Font" "MPlus Nerd Font" "Noto Nerd Font"
-    "OpenDyslexic Nerd Font" "Overpass Nerd Font" "ProFont Nerd Font"
-    "ProggyClean Nerd Font" "RobotoMono Nerd Font" "ShareTechMono Nerd Font"
-    "SourceCodePro Nerd Font" "SpaceMono Nerd Font" "Terminess Nerd Font"
-    "Tinos Nerd Font" "Ubuntu Nerd Font" "UbuntuMono Nerd Font")
-  "Lista de Nerd Fonts disponibles.")
+  '("Hack Nerd Font"          ; principal (la primera disponible se elige)
+    "JetBrainsMono Nerd Font"
+    "VictorMono Nerd Font"    ; tambien usada para italicas (font-lock-comment)
+    "FiraCode Nerd Font"
+    "Iosevka Nerd Font"
+    "CaskaydiaCove Nerd Font")
+  "Nerd Fonts preferidas en orden de prioridad.
+La primera disponible en el sistema se usa como `doom-font'.
+Para anadir mas para el selector interactivo: `change-font'.")
 
 (defvar safe-fonts
   '("Hack Nerd Font" "DejaVu Sans Mono" "Courier New" "Consolas" "Monospace")
@@ -415,12 +401,11 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
 ;; ════════════════════════════════════════════════════════════════════════════
 
 ;; --- Projectile ---
-(setq projectile-project-search-path '("~/src/" "~/src/vocento" "~/"))
-(projectile-add-known-project "~/src/")
-(projectile-add-known-project "~/src/vocento")
-(projectile-add-known-project "~/dotfiles/")
+;; search-path: ~/src/ recursivo + ~/dotfiles. Vocento esta en ~/src/vocento
+;; (subdir, ya detectado). NUNCA poner ~/ aqui (escanearia todo el home).
+(setq projectile-project-search-path '("~/src/" "~/dotfiles/"))
 
-;; Ignorar $HOME como proyecto (tiene .git por los dotfiles)
+;; Salvaguarda: $HOME tiene .git por los dotfiles, ignorar como proyecto.
 (after! projectile
   (add-to-list 'projectile-ignored-projects (expand-file-name "~/")))
 
@@ -442,7 +427,9 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
               ("C-TAB" . 'copilot-accept-completion-by-word)
               ("C-<tab>" . 'copilot-accept-completion-by-word))
   :config
-  (setq copilot-idle-delay 0.1
+  ;; idle-delay 0.3: balance entre responsividad y ruido/coste de API.
+  ;; 0.1 disparaba peticion cada 100ms, demasiado agresivo.
+  (setq copilot-idle-delay 0.3
         copilot-max-char 100000)
   ;; Desactivar warnings de manera correcta
   (add-to-list 'warning-suppress-types '(copilot))
@@ -520,6 +507,11 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
   (setq lsp-haskell-formatting-provider "fourmolu"))
 
 (setq haskell-interactive-popup-errors nil) ; Deshabilitar popups de errores
+
+;; Flycheck haskell-stack-ghc no usa nuestro proyecto (cabal-based) y
+;; ademas peta con caracteres unicode en el codigo. Desactivado.
+(after! flycheck
+  (add-to-list 'flycheck-disabled-checkers 'haskell-stack-ghc))
 ;; ════════════════════════════════════════════════════════════════════════════
 ;; NIX-MODE FIX
 ;; ════════════════════════════════════════════════════════════════════════════
@@ -560,11 +552,6 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
 
     ;; Retornar true si existe
     (file-exists-p adapter-file)))
-
-;; Flycheck haskell-stack-ghc no usa nuestro proyecto (cabal-based) y
-;; ademas peta con caracteres unicode en el codigo. Desactivado.
-(after! flycheck
-  (add-to-list 'flycheck-disabled-checkers 'haskell-stack-ghc))
 
 (use-package! dape
   :config

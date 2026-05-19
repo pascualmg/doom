@@ -82,6 +82,6 @@
 ;; Ayuda con company para restclient
 (package! company-restclient)
 
-(package! lsp-mode)
-(package! php-mode)
+;; lsp-mode y php-mode vienen con los modulos Doom (:tools lsp, :lang php),
+;; no declarar aqui. feature-mode (Gherkin/Cucumber) si es extra.
 (package! feature-mode)

@@ -5,10 +5,6 @@
  ;; If there is more than one, they won't work right.
  '(ignored-local-variable-values '((eval progn (pp-buffer) (indent-buffer))))
  '(magit-todos-insert-after '(bottom) nil nil "Changed by setter of obsolete option `magit-todos-insert-at'")
- '(package-selected-packages
-   '(@ ac-php base16-theme claude-code claude-shell ellama emojify
-     ewal-spacemacs-themes feature-mode geben gherkin-mode gptel haskell-mode
-     logview mermaid-mode org-present rainbow-delimiters spacemacs-theme telega))
  '(warning-suppress-types '((emacs) (defvaralias))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.

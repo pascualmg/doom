@@ -240,14 +240,19 @@ severidad:
 
 ### BAJO / SUGERENCIAS
 
-- [ ] **`[yas] yas-snippet-dirs: /home/passh/.config/doom/snippets/ is not a directory`**.
-  Warning preexistente detectado durante verificacion Fase 1 (2026-05-19).
-  Soluciones: `mkdir -p ~/.config/doom/snippets/`, o quitar modulo
-  `:editor snippets` si no se usan, o redirigir a otra ruta con
-  `yas-snippet-dirs`.
+- [x] **yas snippets dir**. RESUELTO en Fase 1.5: creado `snippets/.gitkeep`.
 
 - [ ] **`download-and-install-nerd-font`**: imperativo en NixOS. Si las
   fonts vienen del flake, esta funcion sobra. Decidir.
+
+- [ ] **`doom doctor` warnings preexistentes** (verificado 2026-05-19):
+  - `:lang php`: `composer` y `php` no en PATH global. Trabajar dentro
+    de `nix develop` del proyecto Vocento. No bloquea Doom.
+  - `:lang plantuml`: pide `plantuml.jar`, pero usamos el ejecutable
+    `plantuml` de NixOS (config en `after! plantuml-mode`). Safe ignore.
+  - `:lang python`: `pipenv` y `nosetests` no en PATH. Pascual no usa
+    workflow Python pesado. Safe ignore o desactivar `:lang python` si
+    nunca se toca.
 
 - [ ] **Modulos Doom desactivados a considerar**:
   - `:checkers (spell +flyspell)` - utiles para org/blog ES/EN
@@ -283,14 +288,23 @@ severidad:
 Bonus: borrado bloque DAP-mode comentado y `doom upgrade` ejecutado.
 Verificado en vivo via emacsclient contra daemon reiniciado limpio.
 
-Pendiente en Fase 1.5 (limpieza minor):
-- Reducir `projectile-project-search-path` (quitar `~/` y subdirs).
-- Limpiar `packages.el` (sacar `lsp-mode`, `php-mode` redundantes).
-- Limpiar `custom.el` `package-selected-packages` con paquetes fantasma.
-- Reducir `my-nerd-fonts` a 5-6 fallbacks reales.
-- Subir `copilot-idle-delay` a 0.3-0.5.
-- Mover `flycheck haskell-stack-ghc` desactivado a su seccion correcta.
-- Decidir snippets dir (warning yas-snippet-dirs).
+### Fase 1.5 - Limpieza minor (HECHA - 2026-05-19)
+
+1. [x] Reducir `projectile-project-search-path` a `~/src/` + `~/dotfiles/`.
+   Quitar `~/` (escaneaba todo home) y `~/src/vocento` (subdir redundante).
+2. [x] Limpiar `packages.el`: sacar `lsp-mode`, `php-mode` (modulos Doom).
+3. [x] Limpiar `custom.el` `package-selected-packages` (fantasmas, Doom
+   usa straight no package.el).
+4. [x] Reducir `my-nerd-fonts` de 62 a 6 (Hack, JetBrainsMono, VictorMono,
+   FiraCode, Iosevka, CaskaydiaCove). El selector `change-font` interactivo
+   sigue funcionando.
+5. [x] Subir `copilot-idle-delay` de 0.1 a 0.3 (menos ruido API).
+6. [x] Mover `flycheck haskell-stack-ghc` desactivado de bloque DAPE a
+   seccion Haskell donde pertenece.
+7. [x] Crear `~/.config/doom/snippets/` con `.gitkeep` (quita warning yas).
+
+Verificado en vivo via emacsclient + `doom doctor` limpio
+(5 warnings preexistentes no relacionados con Fase 1.5, anotados arriba).
 
 ### Fase 2 - Decisiones de modulos
 
@@ -396,6 +410,7 @@ Decidir activar/desactivar:
 ---
 
 Ultima auditoria: 2026-05-19
-Ultima actualizacion: 2026-05-19 (Fase 1 completa + doom upgrade)
-Estado: licencia Intelephense sacada, Fase 1 cerrada y verificada en
-daemon limpio. Doom upgrade pasado sin errores.
+Ultima actualizacion: 2026-05-19 (Fase 1 + 1.5 + doom upgrade + doom doctor)
+Estado: licencia Intelephense sacada, Fase 1 y 1.5 cerradas y verificadas
+en vivo. Doom upgrade pasado. `doom doctor` solo con warnings preexistentes
+no bloqueantes.
