@@ -446,12 +446,23 @@ Para anadir mas para el selector interactivo: `change-font'.")
 ;; frame. Solo si existe sesion guardada previamente.
 ;; Guardado manual: `SPC q s` o M-x +workspace/save-session.
 ;; Carga manual:    `SPC q l` o M-x +workspace/load-session.
+;;
+;; Defensivo: persp-mode es lazy en Doom y persp-auto-save-fname/save-dir
+;; no estan bound hasta primer uso. require + boundp + condition-case para
+;; que un fallo NO reviente doom-after-init-hook (y rompa keybindings).
 (defun +my/auto-load-session-h ()
   "Cargar ultima sesion de workspaces si existe."
-  (when (and (display-graphic-p)
-             (file-exists-p
-              (expand-file-name persp-auto-save-fname persp-save-dir)))
-    (+workspace/load-session)))
+  (when (display-graphic-p)
+    (condition-case err
+        (when (and (require 'persp-mode nil t)
+                   (boundp 'persp-auto-save-fname)
+                   (boundp 'persp-save-dir)
+                   (fboundp '+workspace/load-session)
+                   (file-exists-p
+                    (expand-file-name persp-auto-save-fname persp-save-dir)))
+          (+workspace/load-session))
+      (error (message "[autoload-session] no se pudo cargar sesion: %s"
+                      (error-message-string err))))))
 
 (add-hook 'doom-after-init-hook #'+my/auto-load-session-h)
 
