@@ -438,6 +438,40 @@ Decisiones tomadas:
 - `doom upgrade` puede colgar pidiendo confirmacion. Usar `--force`.
 - `doom sync` puede tardar 8-20s. `doom upgrade` puede tardar 4-10min.
 
+### Sobre hooks de init (importante)
+
+Un error en cualquier hook de `doom-after-init-hook` (o
+`after-init-hook`) puede REVENTAR los hooks posteriores. Si los
+keybindings se aplican en un hook posterior al que peta, el usuario
+ve "no van ni los atajos" - sintoma confuso porque parece roto el map!
+cuando realmente es otro hook anterior.
+
+Hooks en init.el / config.el DEBEN ser defensivos:
+
+```elisp
+;; MAL: si persp-mode lazy no esta cargado, void-variable -> revienta
+(defun mi-hook ()
+  (when (file-exists-p (expand-file-name persp-auto-save-fname persp-save-dir))
+    (+workspace/load-session)))
+
+;; BIEN: require lazy + boundp + condition-case
+(defun mi-hook ()
+  (condition-case err
+      (when (and (require 'persp-mode nil t)
+                 (boundp 'persp-auto-save-fname)
+                 (boundp 'persp-save-dir)
+                 (fboundp '+workspace/load-session)
+                 (file-exists-p (expand-file-name persp-auto-save-fname persp-save-dir)))
+        (+workspace/load-session))
+    (error (message "[mi-hook] ignorado: %s" (error-message-string err)))))
+```
+
+Incidente 2026-05-19: el hook `+my/auto-load-session-h` referenciaba
+`persp-auto-save-fname` sin verificar bound. Doom lo carga lazy, ergo
+el hook petaba al primer arranque, lo que rompia los keybindings
+posteriores. Confuso para el usuario porque "F7 no funciona" parece
+problema de `(map! ...)` cuando es de otro hook.
+
 ### Sobre control del daemon en vivo
 
 - `pgrep -f -- "--daemon"` mete ruido (matchea `nix-daemon`, `ibus-daemon`).
