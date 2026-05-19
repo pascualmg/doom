@@ -85,3 +85,8 @@
 ;; lsp-mode y php-mode vienen con los modulos Doom (:tools lsp, :lang php),
 ;; no declarar aqui. feature-mode (Gherkin/Cucumber) si es extra.
 (package! feature-mode)
+
+;; Claude Code IDE: integracion del CLI claude (Max sub) en Emacs.
+;; MCP bridge bidireccional + ediff de cambios sugeridos + sesiones por proyecto.
+(package! claude-code-ide
+  :recipe (:host github :repo "manzaltu/claude-code-ide.el"))

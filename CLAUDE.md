@@ -171,6 +171,10 @@ Reemplaza dap-mode. Adapters configurados en `config.el`:
   (agresivo, baja a 0.3-0.5 si molesta).
 - **gptel**: backend Ollama en `localhost:11434`, modelo `llama3.1:latest`.
   Default-mode `org-mode`. Directives en espanol.
+- **claude-code-ide**: bridge MCP con el CLI `claude` (suscripcion Max).
+  Entry: `claude-code-ide-menu` via `C-c C-'` o `SPC l c`. NO usa API key.
+  Sesiones por proyecto, ediff para revisar cambios, expone xref/imenu/
+  tree-sitter/project a Claude.
 - **ellama**: paquete instalado pero sin configurar.
 
 ### Fuentes
@@ -315,12 +319,19 @@ Decidir activar/desactivar:
 - minimap (probable NO)
 - tabs (mirar)
 
-### Fase 3 - LLMs
+### Fase 3 - LLMs (PARCIAL - 2026-05-19)
 
-- Configurar gptel con multiples backends (Claude API + Ollama).
-- Key de Claude por agenix+pass.
-- Evaluar `claude-shell` o `claude-code.el` si surge.
-- Atajos `SPC SPC` para chat rapido.
+[x] **claude-code-ide.el integrado** (manzaltu/claude-code-ide.el).
+   - Usa el CLI `claude` (suscripcion Max). Cero coste por token, NO API key.
+   - MCP bidireccional: Claude lee xref/tree-sitter/imenu/project de Emacs.
+   - vterm + ediff para revisar cambios sugeridos antes de aplicar.
+   - Sesiones independientes por proyecto.
+   - Atajos: `C-c C-'` y `SPC l c` -> `claude-code-ide-menu` (transient).
+
+[ ] gptel sigue con Ollama local (sin tocar).
+[ ] Posibles ampliaciones:
+   - Configurar `gptel-make-anthropic` solo si Pascual quisiera API (no es el plan).
+   - Decidir si activar `ellama` (ya en packages.el, sin configurar).
 
 ### Fase 4 - Workflow org/roam
 
@@ -410,7 +421,7 @@ Decidir activar/desactivar:
 ---
 
 Ultima auditoria: 2026-05-19
-Ultima actualizacion: 2026-05-19 (Fase 1 + 1.5 + doom upgrade + doom doctor)
-Estado: licencia Intelephense sacada, Fase 1 y 1.5 cerradas y verificadas
-en vivo. Doom upgrade pasado. `doom doctor` solo con warnings preexistentes
-no bloqueantes.
+Ultima actualizacion: 2026-05-19 (Fases 1, 1.5, 2, 3 cerradas)
+Estado: licencia Intelephense sacada, Fases 1+1.5+2+3 cerradas y verificadas
+en vivo. Doom upgrade pasado. claude-code-ide integrado (via CLI, sin
+API). `doom doctor` solo con warnings preexistentes no bloqueantes.
