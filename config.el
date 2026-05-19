@@ -435,6 +435,21 @@ Para anadir mas para el selector interactivo: `change-font'.")
   (add-to-list 'warning-suppress-types '(copilot))
   (add-to-list 'warning-suppress-log-types '(copilot)))
 
+;; --- Persistencia de sesion (workspaces autoload) ---
+;; Doom autoguarda la sesion (persp-mode) al matar Emacs, pero NO la carga
+;; al arrancar. Este hook lo hace en GUI -- en daemon puro espera al primer
+;; frame. Solo si existe sesion guardada previamente.
+;; Guardado manual: `SPC q s` o M-x +workspace/save-session.
+;; Carga manual:    `SPC q l` o M-x +workspace/load-session.
+(defun +my/auto-load-session-h ()
+  "Cargar ultima sesion de workspaces si existe."
+  (when (and (display-graphic-p)
+             (file-exists-p
+              (expand-file-name persp-auto-save-fname persp-save-dir)))
+    (+workspace/load-session)))
+
+(add-hook 'doom-after-init-hook #'+my/auto-load-session-h)
+
 ;; --- Claude Code IDE (Fase 3) ---
 ;; Bridge MCP entre el CLI `claude` (suscripcion Max) y Emacs.
 ;; Cero coste por token (usa la sub). vterm + ediff para revisar cambios.
