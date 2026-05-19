@@ -240,8 +240,11 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
   (setq org-tags-exclude-from-inheritance '("crypt")
         org-crypt-key "85E4C775557B92E4")
 
-  (add-hook! 'kill-buffer-hook
-    (defun +org-encrypt-on-save ()
+  ;; Cifra los heredia :crypt: antes de cada save de cualquier buffer org-mode.
+  ;; Antes el hook estaba en kill-buffer-hook (cifraba solo al matar buffer):
+  ;; el fichero podia quedar en disco con contenido en claro entre saves.
+  (add-hook! 'before-save-hook
+    (defun +org-encrypt-before-save ()
       (when (derived-mode-p 'org-mode)
         (org-encrypt-entries)))))
 
@@ -265,31 +268,40 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
   (make-directory org-journal-dir t)
   (setq org-agenda-files (append org-agenda-files (list org-journal-dir))))
 
-;; Función para insertar imágenes desde el portapapeles
+;; Función para insertar imágenes desde el portapapeles.
+;; Detecta Wayland (PGTK) -> wl-paste; resto -> xclip.
 (defun brutalist-clipboard-png-insert ()
   "Insert PNG image from clipboard into Org file."
   (interactive)
   (let* ((timestamp (format-time-string "%Y%m%d_%H%M%S"))
          (image-dir (expand-file-name "~/org/images/"))
          (image-name (concat timestamp ".png"))
-         (image-path (expand-file-name image-name image-dir)))
+         (image-path (expand-file-name image-name image-dir))
+         (wayland-p (or (featurep 'pgtk)
+                        (getenv "WAYLAND_DISPLAY")))
+         (cmd (if wayland-p
+                  '("wl-paste" "--type" "image/png")
+                '("xclip" "-selection" "clipboard" "-t" "image/png" "-o")))
+         (tool (car cmd)))
+
+    (unless (executable-find tool)
+      (error "%s no esta instalado (necesario para %s)"
+             tool (if wayland-p "Wayland" "X11")))
 
     (unless (file-directory-p image-dir)
       (make-directory image-dir t))
 
-    (let ((xclip-output
+    (let ((clip-output
            (with-temp-buffer
              (let ((coding-system-for-read 'binary)
                    (coding-system-for-write 'binary))
-               (if (zerop (call-process "xclip" nil t nil
-                                        "-selection" "clipboard"
-                                        "-t" "image/png" "-o"))
+               (if (zerop (apply #'call-process (car cmd) nil t nil (cdr cmd)))
                    (progn
                      (write-region (point-min) (point-max) image-path nil 'silent)
                      (buffer-string))
-                 (error "Failed to get PNG data from clipboard"))))))
+                 (error "Failed to get PNG data from clipboard (via %s)" tool))))))
 
-      (when (and xclip-output (> (length xclip-output) 0))
+      (when (and clip-output (> (length clip-output) 0))
         (insert (format "[[file:%s]]" image-path))
         (message "Image inserted: %s" image-path)))))
 
@@ -339,9 +351,10 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
     key))
 
 (after! lsp-mode
-  ;; Rendimiento crítico
-  (setq gc-cons-threshold (* 2 1024 1024 1024)  ; 2GB durante LSP
-        read-process-output-max (* 1024 1024)   ; 1MB chunks
+  ;; Rendimiento LSP: chunks grandes para outputs voluminosos (intelephense).
+  ;; gc-cons-threshold lo gestiona gcmh-mode (dinamico, ya activo en Doom),
+  ;; NO forzar valor estatico aqui (rompe gcmh y peligroso en RAM baja).
+  (setq read-process-output-max (* 1024 1024)   ; 1MB chunks
         lsp-idle-delay 0.5
         lsp-log-io nil)  ; Activar solo para debug
 
@@ -512,31 +525,6 @@ En PGTK usa 'alpha-background, en X11 usa 'alpha."
 ;; ════════════════════════════════════════════════════════════════════════════
 ;; Fix: font-lock no se activa automáticamente en algunos casos
 (add-hook 'nix-mode-hook #'font-lock-ensure)
-
-;; ════════════════════════════════════════════════════════════════════════════
-;; CONFIGURACIÓN DE COMPRESIÓN
-;; ════════════════════════════════════════════════════════════════════════════
-
-(setq compression-file-name-handler-alist
-      '(("\\.gz\\'" . gzip-file-handler)
-        ("\\.bz2\\'" . bzip2-file-handler)
-        ("\\.xz\\'" . xz-file-handler)
-        ("\\.zip\\'" . zip-file-handler)
-        ("\\.Z\\'" . compress-file-handler)))
-
-
-;; ════════════════════════════════════════════════════════════════════════════
-;; DAP-MODE (DESHABILITADO - Usando dape en su lugar)
-;; ════════════════════════════════════════════════════════════════════════════
-;; (after! dap-mode
-;;   (setq dap-auto-configure-mode nil)
-;;   (setq dap-external-terminal '("alacritty" "--hold" "-e" ))
-;;   (setq dap-default-terminal-kind "external")
-;;   (require 'dap-php)
-;;   (setq dap-php-debug-port 9003)
-;;   (setq dap-php-executable "php"))
-;; (add-hook 'php-mode-hook #'dap-mode)
-
 
 ;; ════════════════════════════════════════════════════════════════════════════
 ;; DAPE - Debug Adapter Protocol
