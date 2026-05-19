@@ -192,31 +192,24 @@ severidad:
 
 ### CRITICO
 
-- [ ] **`org-agenda-files` en `custom.el` pisa la config**. `custom.el`
-  carga DESPUES de `config.el` y setea `'("/home/passh/org/journal/202605.org")`.
-  Cada mes nuevo desaparece de la agenda. Sacar de custom.el y mantener
-  solo el `(setq org-agenda-files (append ... org-journal-dir))` en
-  `config.el`.
+- [x] **`org-agenda-files` en `custom.el` pisa la config**. RESUELTO en
+  commit `46f72c6` (Fase 1, 2026-05-19). Linea eliminada de custom.el.
 
 ### ALTO
 
-- [ ] **`gc-cons-threshold` a 2GB en `after! lsp-mode`** (config.el:347).
-  Doom ya gestiona GC con `gcmh-mode` (dinamico). Forzarlo asi rompe el
-  patron y es peligroso en maquinas con menos RAM (macbook). Bajar a
-  100MB o eliminar y dejar a gcmh.
+- [x] **`gc-cons-threshold` a 2GB en `after! lsp-mode`**. RESUELTO en
+  `46f72c6`. Control devuelto a gcmh-mode. Tras restart daemon: 16MB.
 
-- [ ] **`compression-file-name-handler-alist` no existe** (config.el:520+).
-  Esa variable no esta en Emacs. La real es `file-name-handler-alist`
-  con `jka-compr-handler`. Codigo muerto que no hace nada. Borrar.
+- [x] **`compression-file-name-handler-alist` no existe**. RESUELTO en
+  `46f72c6`. Bloque borrado. Tambien borrado bloque DAP-mode comentado.
 
-- [ ] **Clipboard PNG asume xclip** (`brutalist-clipboard-png-insert`).
-  En Wayland puro falla. Detectar `(featurep 'pgtk)` como en
-  `set-frame-transparency` y bifurcar a `wl-paste -t image/png`.
+- [x] **Clipboard PNG asume xclip**. RESUELTO en `46f72c6`. Detecta
+  `(featurep 'pgtk)` o `WAYLAND_DISPLAY` -> wl-paste; resto -> xclip.
+  Avisa si la tool no esta instalada.
 
-- [ ] **`+org-encrypt-on-save` MIENTE en el nombre** (config.el:243+).
-  Esta en `kill-buffer-hook`, cifra al matar buffer, no al guardar.
-  Renombrar a `+org-encrypt-on-kill` o mover a `before-save-hook`
-  (preferible lo segundo).
+- [x] **`+org-encrypt-on-save` MIENTE en el nombre**. RESUELTO en
+  `46f72c6`. Renombrado a `+org-encrypt-before-save` y movido a
+  `before-save-hook` (mas seguro: cifra cada save, no solo al matar).
 
 ### MEDIO
 
@@ -247,6 +240,12 @@ severidad:
 
 ### BAJO / SUGERENCIAS
 
+- [ ] **`[yas] yas-snippet-dirs: /home/passh/.config/doom/snippets/ is not a directory`**.
+  Warning preexistente detectado durante verificacion Fase 1 (2026-05-19).
+  Soluciones: `mkdir -p ~/.config/doom/snippets/`, o quitar modulo
+  `:editor snippets` si no se usan, o redirigir a otra ruta con
+  `yas-snippet-dirs`.
+
 - [ ] **`download-and-install-nerd-font`**: imperativo en NixOS. Si las
   fonts vienen del flake, esta funcion sobra. Decidir.
 
@@ -273,13 +272,25 @@ severidad:
 
 ## Roadmap de mejoras
 
-### Fase 1 - Limpieza (1-2 sesiones)
+### Fase 1 - Limpieza (HECHA - commit 46f72c6, 2026-05-19)
 
-1. Arreglar `org-agenda-files` en custom.el.
-2. Quitar `gc-cons-threshold` 2GB y `compression-file-name-handler-alist`.
-3. Limpiar projectile, packages.el, custom.el de redundancias.
-4. Arreglar clipboard PNG para Wayland.
-5. Renombrar/mover hook de cifrado org.
+1. [x] Arreglar `org-agenda-files` en custom.el.
+2. [x] Quitar `gc-cons-threshold` 2GB.
+3. [x] Quitar `compression-file-name-handler-alist` (codigo muerto).
+4. [x] Arreglar clipboard PNG para Wayland.
+5. [x] Renombrar/mover hook de cifrado org (now `+org-encrypt-before-save`).
+
+Bonus: borrado bloque DAP-mode comentado y `doom upgrade` ejecutado.
+Verificado en vivo via emacsclient contra daemon reiniciado limpio.
+
+Pendiente en Fase 1.5 (limpieza minor):
+- Reducir `projectile-project-search-path` (quitar `~/` y subdirs).
+- Limpiar `packages.el` (sacar `lsp-mode`, `php-mode` redundantes).
+- Limpiar `custom.el` `package-selected-packages` con paquetes fantasma.
+- Reducir `my-nerd-fonts` a 5-6 fallbacks reales.
+- Subir `copilot-idle-delay` a 0.3-0.5.
+- Mover `flycheck haskell-stack-ghc` desactivado a su seccion correcta.
+- Decidir snippets dir (warning yas-snippet-dirs).
 
 ### Fase 2 - Decisiones de modulos
 
@@ -385,5 +396,6 @@ Decidir activar/desactivar:
 ---
 
 Ultima auditoria: 2026-05-19
-Estado: licencia Intelephense sacada del codigo, primera fase de
-limpieza pendiente.
+Ultima actualizacion: 2026-05-19 (Fase 1 completa + doom upgrade)
+Estado: licencia Intelephense sacada, Fase 1 cerrada y verificada en
+daemon limpio. Doom upgrade pasado sin errores.
