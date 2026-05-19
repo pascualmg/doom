@@ -450,22 +450,6 @@ Para anadir mas para el selector interactivo: `change-font'.")
 
 (add-hook 'doom-after-init-hook #'+my/auto-load-session-h)
 
-;; --- Claude Code IDE (Fase 3) ---
-;; Bridge MCP entre el CLI `claude` (suscripcion Max) y Emacs.
-;; Cero coste por token (usa la sub). vterm + ediff para revisar cambios.
-;; Entry point principal: M-x claude-code-ide-menu (transient).
-;; Atajo: C-c C-' (default del paquete). Tambien SPC l c desde leader Doom.
-(use-package! claude-code-ide
-  :defer t
-  :bind ("C-c C-'" . claude-code-ide-menu)
-  :config
-  ;; Exponer xref/tree-sitter/imenu/project a Claude via MCP server.
-  (claude-code-ide-emacs-tools-setup))
-
-(map! :leader
-      (:prefix ("l" . "llm")
-       :desc "Claude Code menu" "c" #'claude-code-ide-menu))
-
 ;; --- GPTel (Ollama) ---
 (use-package! gptel
   :config

@@ -171,10 +171,8 @@ Reemplaza dap-mode. Adapters configurados en `config.el`:
   (agresivo, baja a 0.3-0.5 si molesta).
 - **gptel**: backend Ollama en `localhost:11434`, modelo `llama3.1:latest`.
   Default-mode `org-mode`. Directives en espanol.
-- **claude-code-ide**: bridge MCP con el CLI `claude` (suscripcion Max).
-  Entry: `claude-code-ide-menu` via `C-c C-'` o `SPC l c`. NO usa API key.
-  Sesiones por proyecto, ediff para revisar cambios, expone xref/imenu/
-  tree-sitter/project a Claude.
+- **claude-code-ide**: PROBADO Y DESCARTADO (2026-05-19). Conflicto con
+  modelo de sesion global Ambrosio. Ver "Lecciones aprendidas".
 - **ellama**: paquete instalado pero sin configurar.
 
 ### Fuentes
@@ -319,19 +317,25 @@ Decidir activar/desactivar:
 - minimap (probable NO)
 - tabs (mirar)
 
-### Fase 3 - LLMs (PARCIAL - 2026-05-19)
+### Fase 3 - LLMs (REVERTIDA - 2026-05-19)
 
-[x] **claude-code-ide.el integrado** (manzaltu/claude-code-ide.el).
-   - Usa el CLI `claude` (suscripcion Max). Cero coste por token, NO API key.
-   - MCP bidireccional: Claude lee xref/tree-sitter/imenu/project de Emacs.
-   - vterm + ediff para revisar cambios sugeridos antes de aplicar.
-   - Sesiones independientes por proyecto.
-   - Atajos: `C-c C-'` y `SPC l c` -> `claude-code-ide-menu` (transient).
+[x] **claude-code-ide.el integrado y luego REVERTIDO** mismo dia.
+
+Decisiones tomadas:
+- Pascual NO quiere integracion Claude CLI dentro de Emacs por ahora.
+- Razon: su Ambrosio vive en sesion global ~ (`~/.claude/projects/-home-passh/`)
+  y `claude-code-ide.el` crea sesiones nuevas por proyecto. Conflicto de
+  modelo mental. Pascual usa claude/ambrosio en terminal (zellij), Emacs
+  es solo editor.
+- Reversion limpia: paquete fuera de packages.el, config fuera, repos
+  purgados via `doom purge`.
 
 [ ] gptel sigue con Ollama local (sin tocar).
-[ ] Posibles ampliaciones:
-   - Configurar `gptel-make-anthropic` solo si Pascual quisiera API (no es el plan).
-   - Decidir si activar `ellama` (ya en packages.el, sin configurar).
+[ ] Si en futuro vuelve a entrar:
+   - Decidir si claude-code-ide o un comando custom que abra vterm + ~ +
+     `ambrosio -r` (sin wrapper, una sola sesion global).
+   - Si claude-code-ide vuelve a entrar, NO bindear a `SPC l c` sin avisar
+     que crea sesiones por proyecto.
 
 ### Fase 4 - Workflow org/roam
 
@@ -403,6 +407,59 @@ Decidir activar/desactivar:
   (para evitar problemas de encoding viejos - los strings de UI
   si llevan acentos).
 
+## Lecciones aprendidas (2026-05-19)
+
+### Sobre Pascual
+
+- **Es noob con Emacs/Doom** aunque sabe lo basico. Adaptar explicaciones:
+  paso a paso, decir EXACTAMENTE que teclas pulsar, explicar QUE pasa.
+  No asumir conocimiento de `M-x`, leader keys, persp, ediff, transient,
+  buffer/frame/window. Tabla "Quiero... | Pulso..." al final de cambios
+  visibles funciona bien.
+- **Workflow Claude esta en terminal/zellij, NO en Emacs**. Su Ambrosio
+  vive en sesion global `~/.claude/projects/-home-passh/` con UUID
+  `967be28a-46dd-4925-b62a-7c0193cc5957`. Emacs es solo editor. NO
+  integrar paquetes Claude sin verificar primero como conviven con esto.
+
+### Sobre cualquier paquete tipo "Claude in Emacs"
+
+- Paquetes como `claude-code-ide.el`, `claude-code.el`, `claude-code-emacs`
+  crean sesiones NUEVAS por proyecto (lanzan el CLI con `cwd` del proyecto).
+  NO se conectan a sesiones existentes como la de Ambrosio.
+- Si en algun momento se quiere integrar Claude desde Emacs respetando
+  Ambrosio global: hacer comando propio que abra vterm con `cd ~ && ambrosio -r`,
+  NO usar wrappers que asumen "una sesion por proyecto".
+
+### Sobre comandos Doom CLI
+
+- `doom sync` regenera manifests pero NO purga repos huerfanos.
+- `doom purge` es subcomando separado (DEPRECADO en 2.1.0, sigue funcionando).
+- `--purge` NO es flag de `doom sync`. No combinar.
+- `doom upgrade` puede colgar pidiendo confirmacion. Usar `--force`.
+- `doom sync` puede tardar 8-20s. `doom upgrade` puede tardar 4-10min.
+
+### Sobre control del daemon en vivo
+
+- `pgrep -f -- "--daemon"` mete ruido (matchea `nix-daemon`, `ibus-daemon`).
+  Usar `ps -ef | awk '/emacs --daemon/ && !/awk/ {print $2}'`.
+- `kill <pid>` (SIGTERM) a veces no mata el daemon Emacs (sigue vivo).
+  Usar `kill -9` para garantizar.
+- Tras restart, esperar ping `emacsclient --eval "(emacs-version)"` antes
+  de verificar. Suele estar listo en 1-2s.
+- Algunos efectos solo se ven en daemon FRESCO (no en daemon recargado):
+  - `defvar` con variable ya bound no reasigna -> usar `makunbound` antes.
+  - `custom-set-variables` ya aplicado persiste en RAM.
+  - Hooks ya registrados persisten aunque la funcion cambie.
+  - `(after! pkg ...)` no re-evalua si pkg ya cargado.
+- Aceptarlo: para fixes complejos, verificacion REAL solo tras restart.
+
+### Sobre commits del repo doom
+
+- Repo PUBLICO: nada de secretos hardcodeados. Patron: `my/get-FOO-key`
+  con fallback agenix -> pass -> warning.
+- Stealth mode: commits SIN `Co-Authored-By` ni firmas de Claude.
+- Verificar con `grep -r SECRET ~/src/doom/` antes de commitear.
+
 ## Notas para Claude
 
 - **Tienes daemon vivo a tu alcance**: usa `emacsclient --eval` para
@@ -421,7 +478,9 @@ Decidir activar/desactivar:
 ---
 
 Ultima auditoria: 2026-05-19
-Ultima actualizacion: 2026-05-19 (Fases 1, 1.5, 2, 3 cerradas)
-Estado: licencia Intelephense sacada, Fases 1+1.5+2+3 cerradas y verificadas
-en vivo. Doom upgrade pasado. claude-code-ide integrado (via CLI, sin
-API). `doom doctor` solo con warnings preexistentes no bloqueantes.
+Ultima actualizacion: 2026-05-19 (Fases 1, 1.5, 2 cerradas; Fase 3 revertida)
+Estado: licencia Intelephense sacada, Fases 1+1.5+2 cerradas y verificadas
+en vivo. Doom upgrade pasado. Fase 3 (claude-code-ide) probada y revertida
+por decision de Pascual (conflicto con modelo Ambrosio global). Autoload
+de sesion workspaces activo. `doom doctor` solo con warnings preexistentes
+no bloqueantes.
