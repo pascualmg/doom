@@ -448,6 +448,17 @@ Para anadir mas para el selector interactivo: `change-font'.")
 ;; lo usa con evil). GUI Emacs no se ve afectado (ESC ya es instantaneo).
 (setq evil-esc-delay 0.001)
 
+;; --- KKP: Kitty Keyboard Protocol en TUI ---
+;; alacritty 0.13+/wezterm/kitty/foot/ghostty/zellij mandan teclas
+;; modificadas como secuencias CSI u: ESC=`^[[27u`, Ctrl-x=`^[[120;5u`.
+;; Emacs TUI clasico las recibe como `M-[ 27 u undefined` -> medio teclado
+;; roto. kkp negocia con el terminal y descodifica CSI u a teclas reales.
+;; Solo se activa en TUI; en GUI no estorba.
+(use-package! kkp
+  :unless (display-graphic-p)
+  :config
+  (global-kkp-mode +1))
+
 ;; --- Persistencia de sesion (workspaces autoload) ---
 ;; Doom autoguarda la sesion (persp-mode) al matar Emacs, pero NO la carga
 ;; al arrancar. Este hook lo hace en GUI -- en daemon puro espera al primer
