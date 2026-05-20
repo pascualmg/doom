@@ -440,6 +440,14 @@ Para anadir mas para el selector interactivo: `change-font'.")
   (add-to-list 'warning-suppress-types '(copilot))
   (add-to-list 'warning-suppress-log-types '(copilot)))
 
+;; --- ESC instantaneo en TUI (emacs -nw) ---
+;; En terminal, Alt+X historicamente viene como `ESC X`. Por eso Emacs
+;; tras un ESC espera ~100ms a ver si llega otra tecla para formar Meta-X.
+;; En evil insert mode eso hace que ESC "no responda" o reaccione lento.
+;; Bajar a 1ms = ESC instantaneo. Pierdes Meta-via-ESC en terminal (nadie
+;; lo usa con evil). GUI Emacs no se ve afectado (ESC ya es instantaneo).
+(setq evil-esc-delay 0.001)
+
 ;; --- Persistencia de sesion (workspaces autoload) ---
 ;; Doom autoguarda la sesion (persp-mode) al matar Emacs, pero NO la carga
 ;; al arrancar. Este hook lo hace en GUI -- en daemon puro espera al primer
