@@ -440,24 +440,19 @@ Para anadir mas para el selector interactivo: `change-font'.")
   (add-to-list 'warning-suppress-types '(copilot))
   (add-to-list 'warning-suppress-log-types '(copilot)))
 
-;; --- ESC instantaneo en TUI (emacs -nw) ---
-;; En terminal, Alt+X historicamente viene como `ESC X`. Por eso Emacs
-;; tras un ESC espera ~100ms a ver si llega otra tecla para formar Meta-X.
-;; En evil insert mode eso hace que ESC "no responda" o reaccione lento.
-;; Bajar a 1ms = ESC instantaneo. Pierdes Meta-via-ESC en terminal (nadie
-;; lo usa con evil). GUI Emacs no se ve afectado (ESC ya es instantaneo).
-(setq evil-esc-delay 0.001)
-
-;; --- KKP: Kitty Keyboard Protocol en TUI ---
-;; alacritty 0.13+/wezterm/kitty/foot/ghostty/zellij mandan teclas
-;; modificadas como secuencias CSI u: ESC=`^[[27u`, Ctrl-x=`^[[120;5u`.
-;; Emacs TUI clasico las recibe como `M-[ 27 u undefined` -> medio teclado
-;; roto. kkp negocia con el terminal y descodifica CSI u a teclas reales.
-;; Solo se activa en TUI; en GUI no estorba.
-(use-package! kkp
-  :unless (display-graphic-p)
-  :config
-  (global-kkp-mode +1))
+;; --- Reset Kitty Keyboard Protocol al arrancar en TUI ---
+;; alacritty 0.13+ y otros terminales modernos activan CSI u (kitty protocol)
+;; cuando alguna app lo solicita. Si Pascual hace SSH desde alacritty mac
+;; -> alacritty queda mandando teclas como `^[[27u` (ESC) o `^[[120;5u`
+;; (Ctrl-x), y Emacs TUI clasico no lo entiende -> medio teclado roto.
+;;
+;; `\e[>u` (CSI > u) le dice al terminal "deshabilita kitty protocol
+;; ahora". Lo mandamos al arrancar Emacs en TUI -> ESC y atajos vuelven
+;; a ser los clasicos `^[`, `\C-x`, etc. que Emacs si entiende.
+;;
+;; Solo en TUI; GUI no necesita esto.
+(unless (display-graphic-p)
+  (send-string-to-terminal "\e[>u"))
 
 ;; --- Persistencia de sesion (workspaces autoload) ---
 ;; Doom autoguarda la sesion (persp-mode) al matar Emacs, pero NO la carga

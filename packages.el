@@ -85,11 +85,3 @@
 ;; lsp-mode y php-mode vienen con los modulos Doom (:tools lsp, :lang php),
 ;; no declarar aqui. feature-mode (Gherkin/Cucumber) si es extra.
 (package! feature-mode)
-
-;; KKP: ensena a Emacs TUI a entender Kitty Keyboard Protocol (CSI u).
-;; Necesario en alacritty 0.13+/wezterm/ghostty/kitty/foot que mandan
-;; teclas como `^[[27u` (ESC) o `^[[120;5u` (Ctrl-x). Sin esto, en
-;; emacs -nw dentro de alacritty (con o sin zellij) la mitad de teclas
-;; salen como "<27>;u undefined".
-(package! kkp
-  :recipe (:host github :repo "benotn/kkp"))
