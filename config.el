@@ -440,19 +440,24 @@ Para anadir mas para el selector interactivo: `change-font'.")
   (add-to-list 'warning-suppress-types '(copilot))
   (add-to-list 'warning-suppress-log-types '(copilot)))
 
-;; --- Reset Kitty Keyboard Protocol al arrancar en TUI ---
-;; alacritty 0.13+ y otros terminales modernos activan CSI u (kitty protocol)
-;; cuando alguna app lo solicita. Si Pascual hace SSH desde alacritty mac
-;; -> alacritty queda mandando teclas como `^[[27u` (ESC) o `^[[120;5u`
-;; (Ctrl-x), y Emacs TUI clasico no lo entiende -> medio teclado roto.
+;; --- Reset Kitty Keyboard Protocol al arrancar en TUI (insistente) ---
+;; alacritty 0.13+ activa CSI u (kitty protocol). Emacs TUI no lo
+;; entiende -> ESC, Ctrl-x, etc. salen como `<27>;u undefined`.
 ;;
-;; `\e[>u` (CSI > u) le dice al terminal "deshabilita kitty protocol
-;; ahora". Lo mandamos al arrancar Emacs en TUI -> ESC y atajos vuelven
-;; a ser los clasicos `^[`, `\C-x`, etc. que Emacs si entiende.
+;; Caso comun de Pascual: pane flotante con Emacs JUNTO a pane con
+;; Claude Code/Ambrosio. La otra app re-activa el protocol al renderizar,
+;; ergo un reset unico al arrancar Emacs no basta. Hay que reafirmarlo
+;; en cada idle.
 ;;
-;; Solo en TUI; GUI no necesita esto.
+;; Estrategia:
+;;   1. Reset al arrancar (cubre el caso simple).
+;;   2. Idle timer cada 100ms que repite el reset (cubre el caso donde
+;;      otra app re-activa). El terminal ignora el reset si ya esta
+;;      desactivado, asi que no hay coste perceptible.
 (unless (display-graphic-p)
-  (send-string-to-terminal "\e[>u"))
+  (send-string-to-terminal "\e[>u")
+  (run-with-idle-timer
+   0.1 t (lambda () (send-string-to-terminal "\e[>u"))))
 
 ;; --- Persistencia de sesion (workspaces autoload) ---
 ;; Doom autoguarda la sesion (persp-mode) al matar Emacs, pero NO la carga
