@@ -440,24 +440,17 @@ Para anadir mas para el selector interactivo: `change-font'.")
   (add-to-list 'warning-suppress-types '(copilot))
   (add-to-list 'warning-suppress-log-types '(copilot)))
 
-;; --- Reset Kitty Keyboard Protocol al arrancar en TUI (insistente) ---
+;; --- Reset Kitty Keyboard Protocol al arrancar en TUI ---
 ;; alacritty 0.13+ activa CSI u (kitty protocol). Emacs TUI no lo
 ;; entiende -> ESC, Ctrl-x, etc. salen como `<27>;u undefined`.
+;; `\e[>u` apaga el protocol. Solo al arrancar.
 ;;
-;; Caso comun de Pascual: pane flotante con Emacs JUNTO a pane con
-;; Claude Code/Ambrosio. La otra app re-activa el protocol al renderizar,
-;; ergo un reset unico al arrancar Emacs no basta. Hay que reafirmarlo
-;; en cada idle.
-;;
-;; Estrategia:
-;;   1. Reset al arrancar (cubre el caso simple).
-;;   2. Idle timer cada 100ms que repite el reset (cubre el caso donde
-;;      otra app re-activa). El terminal ignora el reset si ya esta
-;;      desactivado, asi que no hay coste perceptible.
+;; Limitacion: si en otro pane corre otra app que re-activa el protocol
+;; (Claude Code, Ambrosio), este reset se machaca. Para ese caso, la
+;; solucion correcta es desactivar kitty en el TERMINAL (alacritty mac
+;; config), no en Emacs.
 (unless (display-graphic-p)
-  (send-string-to-terminal "\e[>u")
-  (run-with-idle-timer
-   0.1 t (lambda () (send-string-to-terminal "\e[>u"))))
+  (send-string-to-terminal "\e[>u"))
 
 ;; --- Persistencia de sesion (workspaces autoload) ---
 ;; Doom autoguarda la sesion (persp-mode) al matar Emacs, pero NO la carga
