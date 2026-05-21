@@ -447,7 +447,14 @@ Para anadir mas para el selector interactivo: `change-font'.")
 ;; algun paquete manda una secuencia post-ESC. Bajar el delay a 1ms =
 ;; ESC se procesa al instante, sin componer Meta con lo siguiente.
 ;; Pierdes Alt-via-ESC (nadie lo usa con evil).
-(setq evil-esc-delay 0.001)
+;;
+;; `after! evil` para asegurar que se aplica TRAS cargar el modulo
+;; evil de Doom (si no, el default de evil machaca nuestro setq).
+;; Tambien `read-key-sequence-delay 0` por si el problema viene del
+;; subsystem de lectura de teclas de Emacs, no solo de evil.
+(after! evil
+  (setq evil-esc-delay 0.001))
+(setq read-key-sequence-delay 0)
 
 ;; --- Reset Kitty Keyboard Protocol al arrancar en TUI ---
 ;; alacritty 0.13+/Emacs 28+ negocian CSI u al arrancar TUI. Emacs no
