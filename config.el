@@ -440,17 +440,31 @@ Para anadir mas para el selector interactivo: `change-font'.")
   (add-to-list 'warning-suppress-types '(copilot))
   (add-to-list 'warning-suppress-log-types '(copilot)))
 
+;; --- ESC instantaneo en TUI (sin esperar secuencias Meta) ---
+;; Emacs por defecto trata ESC como prefijo Meta (Alt+X = ESC X) y
+;; espera ~100ms a ver si llega otra tecla. En terminal eso provoca
+;; "Key sequence ESC C-<delete> starts with non-prefix key ESC" cuando
+;; algun paquete manda una secuencia post-ESC. Bajar el delay a 1ms =
+;; ESC se procesa al instante, sin componer Meta con lo siguiente.
+;; Pierdes Alt-via-ESC (nadie lo usa con evil).
+(setq evil-esc-delay 0.001)
+
 ;; --- Reset Kitty Keyboard Protocol al arrancar en TUI ---
-;; alacritty 0.13+ activa CSI u (kitty protocol). Emacs TUI no lo
-;; entiende -> ESC, Ctrl-x, etc. salen como `<27>;u undefined`.
-;; `\e[>u` apaga el protocol. Solo al arrancar.
+;; alacritty 0.13+/Emacs 28+ negocian CSI u al arrancar TUI. Emacs no
+;; lo termina de manejar bien -> ESC, Ctrl-x, etc. salen como
+;; `<27>;u undefined`.
 ;;
-;; Limitacion: si en otro pane corre otra app que re-activa el protocol
-;; (Claude Code, Ambrosio), este reset se machaca. Para ese caso, la
-;; solucion correcta es desactivar kitty en el TERMINAL (alacritty mac
-;; config), no en Emacs.
-(unless (display-graphic-p)
-  (send-string-to-terminal "\e[>u"))
+;; Estrategia (probada empiricamente con Pascual):
+;;   1. (send-string-to-terminal ...) al cargar config.el = DEMASIADO
+;;      PRONTO. Emacs negocia despues y reactiva el protocol.
+;;   2. tty-setup-hook = se dispara DESPUES de inicializar el TTY frame.
+;;      Reset llega cuando Emacs ya negocio -> apaga lo que Emacs activo.
+;;   3. Tambien aplica a emacsclient -nw (cada frame TUI nuevo).
+;;
+;; `\e[<u` pop kitty stack + `\e[>0u` disable con flags 0 explicito.
+(add-hook 'tty-setup-hook
+          (defun +my/disable-kitty-keyboard-protocol-h ()
+            (send-string-to-terminal "\e[<u\e[>0u")))
 
 ;; --- Persistencia de sesion (workspaces autoload) ---
 ;; Doom autoguarda la sesion (persp-mode) al matar Emacs, pero NO la carga
