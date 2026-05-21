@@ -440,21 +440,13 @@ Para anadir mas para el selector interactivo: `change-font'.")
   (add-to-list 'warning-suppress-types '(copilot))
   (add-to-list 'warning-suppress-log-types '(copilot)))
 
-;; --- ESC instantaneo en TUI (sin esperar secuencias Meta) ---
-;; Emacs por defecto trata ESC como prefijo Meta (Alt+X = ESC X) y
-;; espera ~100ms a ver si llega otra tecla. En terminal eso provoca
-;; "Key sequence ESC C-<delete> starts with non-prefix key ESC" cuando
-;; algun paquete manda una secuencia post-ESC. Bajar el delay a 1ms =
-;; ESC se procesa al instante, sin componer Meta con lo siguiente.
-;; Pierdes Alt-via-ESC (nadie lo usa con evil).
-;;
-;; `after! evil` para asegurar que se aplica TRAS cargar el modulo
-;; evil de Doom (si no, el default de evil machaca nuestro setq).
-;; Tambien `read-key-sequence-delay 0` por si el problema viene del
-;; subsystem de lectura de teclas de Emacs, no solo de evil.
+;; --- ESC instantaneo en TUI ---
+;; ESC por defecto = prefijo Meta + 100ms de espera. En terminal causa
+;; "Key sequence ESC C-<delete> starts with non-prefix key ESC".
+;; Bajar a 1ms = ESC al instante.
 (after! evil
   (setq evil-esc-delay 0.001))
-(setq read-key-sequence-delay 0)
+
 
 ;; --- Reset Kitty Keyboard Protocol al arrancar en TUI ---
 ;; alacritty 0.13+/Emacs 28+ negocian CSI u al arrancar TUI. Emacs no
