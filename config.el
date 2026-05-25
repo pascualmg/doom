@@ -440,31 +440,6 @@ Para anadir mas para el selector interactivo: `change-font'.")
   (add-to-list 'warning-suppress-types '(copilot))
   (add-to-list 'warning-suppress-log-types '(copilot)))
 
-;; --- ESC instantaneo en TUI ---
-;; ESC por defecto = prefijo Meta + 100ms de espera. En terminal causa
-;; "Key sequence ESC C-<delete> starts with non-prefix key ESC".
-;; Bajar a 1ms = ESC al instante.
-(after! evil
-  (setq evil-esc-delay 0.001))
-
-
-;; --- Reset Kitty Keyboard Protocol al arrancar en TUI ---
-;; alacritty 0.13+/Emacs 28+ negocian CSI u al arrancar TUI. Emacs no
-;; lo termina de manejar bien -> ESC, Ctrl-x, etc. salen como
-;; `<27>;u undefined`.
-;;
-;; Estrategia (probada empiricamente con Pascual):
-;;   1. (send-string-to-terminal ...) al cargar config.el = DEMASIADO
-;;      PRONTO. Emacs negocia despues y reactiva el protocol.
-;;   2. tty-setup-hook = se dispara DESPUES de inicializar el TTY frame.
-;;      Reset llega cuando Emacs ya negocio -> apaga lo que Emacs activo.
-;;   3. Tambien aplica a emacsclient -nw (cada frame TUI nuevo).
-;;
-;; `\e[<u` pop kitty stack + `\e[>0u` disable con flags 0 explicito.
-(add-hook 'tty-setup-hook
-          (defun +my/disable-kitty-keyboard-protocol-h ()
-            (send-string-to-terminal "\e[<u\e[>0u")))
-
 ;; --- Persistencia de sesion (workspaces autoload) ---
 ;; Doom autoguarda la sesion (persp-mode) al matar Emacs, pero NO la carga
 ;; al arrancar. Este hook lo hace en GUI -- en daemon puro espera al primer
