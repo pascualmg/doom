@@ -259,6 +259,91 @@ Para anadir mas para el selector interactivo: `change-font'.")
   (make-directory org-journal-dir t)
   (setq org-agenda-files (append org-agenda-files (list org-journal-dir))))
 
+;; ════════════════════════════════════════════════════════════════════════════
+;; GOOGLE CALENDAR (org-gcal + calfw)
+;; ════════════════════════════════════════════════════════════════════════════
+
+;; Lee credenciales OAuth de agenix -> pass -> warn (mismo patron que
+;; my/get-intelephense-key). Devuelve (cons client-id client-secret) o nil.
+;; Formato del .age (2 lineas): client-id en linea 1, secret en linea 2.
+(defun my/get-google-oauth-creds ()
+  "Obtiene OAuth Google (client-id . client-secret) para org-gcal.
+Orden: agenix -> pass -> nil + warn."
+  (let* ((secrets-dir (expand-file-name "~/dotfiles/secrets/"))
+         (age-file (expand-file-name "google-oauth-emacs.age" secrets-dir))
+         (creds
+          (or
+           ;; 1. agenix
+           (and (executable-find "agenix")
+                (file-readable-p age-file)
+                (let* ((default-directory secrets-dir)
+                       (out (shell-command-to-string
+                             "agenix -d google-oauth-emacs.age 2>/dev/null")))
+                  (let ((lines (split-string out "\n" t " *")))
+                    (when (>= (length lines) 2)
+                      (cons (nth 0 lines) (nth 1 lines))))))
+           ;; 2. pass (dos entradas separadas)
+           (and (executable-find "pass")
+                (let ((id (string-trim
+                           (shell-command-to-string
+                            "pass show web/google-oauth-emacs-client-id 2>/dev/null | head -1")))
+                      (sec (string-trim
+                            (shell-command-to-string
+                             "pass show web/google-oauth-emacs-client-secret 2>/dev/null | head -1"))))
+                  (when (and (not (string-empty-p id))
+                             (not (string-empty-p sec)))
+                    (cons id sec)))))))
+    (unless creds
+      (message "[org-gcal] credenciales no encontradas (ni agenix ni pass). Sync no funcionara."))
+    creds))
+
+(use-package! org-gcal
+  :defer t
+  :config
+  (let ((creds (my/get-google-oauth-creds)))
+    (when creds
+      (setq org-gcal-client-id     (car creds)
+            org-gcal-client-secret (cdr creds))))
+
+  ;; Mapeo calendario Google -> fichero org local.
+  ;; - personal: la cuenta Gmail principal de Pascual.
+  ;; - family:   calendario compartido con Cristina (creado por Ambrosio efimero).
+  ;; - curro:    deshabilitado por defecto (Vocento es cuenta separada).
+  ;;             Para activar: descomentar y verificar el ID.
+  (setq org-gcal-fetch-file-alist
+        '(("pascual.munoz.galian@gmail.com" . "~/org/calendar/personal.org")
+          ("f084a140a73e530b1f474b6a3ba44e59c32f34a7016abb003e59780e710eca8c@group.calendar.google.com"
+           . "~/org/calendar/family.org")
+          ;; ("<id-curro>@group.calendar.google.com" . "~/org/calendar/curro.org")
+          ))
+
+  ;; Recordatorios por defecto al crear evento desde Emacs.
+  (setq org-gcal-recurring-events-mode 'top-level
+        org-gcal-remove-api-cancelled-events t)
+
+  ;; Anadir los .org de calendar al org-agenda para verlos unificados.
+  (dolist (file (mapcar #'cdr org-gcal-fetch-file-alist))
+    (add-to-list 'org-agenda-files (expand-file-name file))))
+
+;; Vista calendario tipo cuadricula (calfw).
+(use-package! calfw
+  :defer t
+  :commands (cfw:open-org-calendar))
+(use-package! calfw-org
+  :defer t
+  :after calfw)
+
+;; Atajos: SPC l g <letra> para Google Calendar.
+(map! :leader
+      (:prefix ("l g" . "google calendar")
+       :desc "Fetch (pull events)"     "f" #'org-gcal-fetch
+       :desc "Sync (push + pull)"      "s" #'org-gcal-sync
+       :desc "Post-at-point (push)"    "p" #'org-gcal-post-at-point
+       :desc "Delete-at-point"         "d" #'org-gcal-delete-at-point
+       :desc "Vista calfw (org)"       "v" #'cfw:open-org-calendar
+       :desc "Abrir personal.org"      "P" (lambda () (interactive) (find-file "~/org/calendar/personal.org"))
+       :desc "Abrir family.org"        "F" (lambda () (interactive) (find-file "~/org/calendar/family.org"))))
+
 ;; Función para insertar imágenes desde el portapapeles.
 ;; Detecta Wayland (PGTK) -> wl-paste; resto -> xclip.
 (defun brutalist-clipboard-png-insert ()
@@ -631,13 +716,19 @@ Para anadir mas para el selector interactivo: `change-font'.")
                `(haskell-hdb
                  modes (haskell-mode haskell-ts-mode haskell-cabal-mode)
                  ensure (lambda (config)
-                          (unless (executable-find "hdb")
+                          (unless (executable-find "hdb-dap")
                             (user-error
-                             "hdb no encontrado en PATH. Verifica ~/.local/bin/hdb")))
+                             "hdb-dap no encontrado en PATH. Verifica ~/.local/bin/hdb-dap")))
                  fn (dape-config-autoport)
                  host "localhost"
                  port :autoport
-                 command "hdb"
+                 ;; hdb-dap = wrapper bash que sube buscando flake.nix y
+                 ;; ejecuta `nix develop --command hdb "$@"`. Necesario
+                 ;; porque hdb hace abort si encuentra GHC distinto del
+                 ;; 9.14 con el que fue compilado, y el emacs daemon no
+                 ;; vive dentro de nix develop por defecto. (Fix
+                 ;; sensei 2026-05-25)
+                 command "hdb-dap"
                  command-args ("server" "--port" :autoport)
                  :type "haskell-debugger"
                  :request "launch"

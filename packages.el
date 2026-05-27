@@ -67,6 +67,11 @@
 
 (package! org-gcal)
 
+;; Vista calendario grafica dentro de Emacs (cuadricula mes/semana/dia).
+;; calfw-org integra los TODOs/events de org-mode + org-gcal en la vista.
+(package! calfw)
+(package! calfw-org)
+
 ;; Cliente HTTP principal
 (package! restclient)
 
