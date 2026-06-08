@@ -144,6 +144,33 @@ Para anadir mas para el selector interactivo: `change-font'.")
 
 (setup-fonts)
 
+;; Frames de terminal (emacsclient -t): pintar el fondo SOLIDO del theme,
+;; como hace `emacs -nw'. Por defecto el daemon les deja bg "black"/transparente
+;; (se ve el fondo del terminal). BLINDADO: solo forzamos el fondo si el frame
+;; es truecolor (>=16M colores); en 256 colores un bg oscuro desaturado cuantiza
+;; a azul feo, asi que ahi no tocamos. El daemon va en truecolor si arranca con
+;; COLORTERM=truecolor (lo pone xmonad al lanzarlo).
+(defun my/tty-frame-solid-bg (&optional frame)
+  "Pintar en FRAME (o el actual), si es terminal truecolor, el fondo del theme."
+  (let ((frame (or frame (selected-frame))))
+    (when (and frame
+               (not (display-graphic-p frame))
+               (>= (display-color-cells frame) 16777216)
+               (fboundp 'doom-color))
+      (let ((bg (doom-color 'bg)))
+        (when (stringp bg)
+          (set-frame-parameter frame 'background-color bg)
+          (set-face-background 'default bg frame))))))
+
+;; En daemon, al cargar config.el todavia no hay display grafico, asi que
+;; find-font falla y `doom-font' queda nil: los frames nuevos del cliente
+;; caen a un fallback chico (Hack 13 en vez de tu 18). Y los frames TTY no
+;; cogen el fondo del theme. Re-aplicar fuente + fondo al crear cada frame,
+;; cuando ya hay display y find-font/doom-color funcionan.
+(when (daemonp)
+  (add-hook 'server-after-make-frame-hook #'setup-fonts)
+  (add-hook 'server-after-make-frame-hook #'my/tty-frame-solid-bg))
+
 ;; Comentarios y keywords en cursiva con Victor Mono.
 ;; Linea de ejecucion en dape: magenta Spacemacs, fondo solido,
 ;; texto blanco bold. :extend t para que ocupe toda la linea.
@@ -303,7 +330,13 @@ Orden: agenix -> pass -> nil + warn."
   (let ((creds (my/get-google-oauth-creds)))
     (when creds
       (setq org-gcal-client-id     (car creds)
-            org-gcal-client-secret (cdr creds))))
+            org-gcal-client-secret (cdr creds))
+      ;; CRITICO: org-gcal solo registra el provider en oauth2-auto al
+      ;; cargar el paquete, cuando aun NO hemos seteado las credenciales
+      ;; (van en este :config). Hay que re-registrar a mano tras setearlas,
+      ;; si no oauth2-auto-additional-providers-alist queda vacio y el
+      ;; OAuth peta. Esta linea lo arregla.
+      (org-gcal-reload-client-id-secret)))
 
   ;; Mapeo calendario Google -> fichero org local.
   ;; - personal: la cuenta Gmail principal de Pascual.
