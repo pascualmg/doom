@@ -790,4 +790,106 @@ Orden: agenix -> pass -> nil + warn."
       (message "🗑️  Adaptador anterior eliminado"))
     (dape-ensure-php-debug-adapter)))
 
+;; ═══════════════════════════════════════════════════════════════════════
+;; BEHAT: saltar de un step Gherkin a su definicion PHP (estilo PhpStorm)
+;; ═══════════════════════════════════════════════════════════════════════
+;; En un .feature, `gd' sobre un step (Given/When/Then) salta al metodo PHP
+;; cuya anotacion @Given/@When/@Then casa con el. Soporta placeholders
+;; (:param) y /regex/. Si varios casan, ofrece elegir. Indexa los Context
+;; con ripgrep, asi que es instantaneo aunque haya cientos de steps.
+
+(defun my/behat--strip-keyword (line)
+  "Quita la keyword Gherkin (ES/EN) y espacios del principio de LINE."
+  (replace-regexp-in-string
+   "\\`[ \t]*\\(?:Given\\|When\\|Then\\|And\\|But\\|Dado\\|Dada\\|Cuando\\|Entonces\\|Y\\|Pero\\|\\*\\)[ \t]+"
+   "" (string-trim line)))
+
+(defun my/behat--annot->regexp (annot)
+  "Convierte ANNOT (texto tras @Given/@When/@Then) en un regexp Emacs anclado.
+Soporta placeholder (:param) y /regex/. Devuelve nil si no compila."
+  (condition-case nil
+      (let ((a (string-trim annot)))
+        (if (string-match "\\`/\\(.*\\)/[a-z]*\\'" a)
+            ;; estilo regex PCRE -> conversion minima a Emacs
+            (let ((re (match-string 1 a)))
+              (setq re (replace-regexp-in-string "\\\\d" "[0-9]" re))
+              (setq re (replace-regexp-in-string "\\\\w" "[A-Za-z0-9_]" re))
+              (setq re (replace-regexp-in-string "(\\?:" "\x01" re)) ; preserva (?:
+              (setq re (replace-regexp-in-string "(" "\\\\(?:" re))
+              (setq re (replace-regexp-in-string ")" "\\\\)" re))
+              (setq re (replace-regexp-in-string "\x01" "\\\\(?:" re))
+              (and (ignore-errors (string-match-p re "") t) re))
+          ;; estilo placeholder :param
+          (let ((q (regexp-quote a)))
+            (concat "\\`"
+                    (replace-regexp-in-string
+                     ":[A-Za-z_][A-Za-z0-9_]*"
+                     "\\\\(?:\"[^\"]*\"\\\\|[^ ]+\\\\)"
+                     q)
+                    "\\'"))))
+    (error nil)))
+
+(defun my/behat--collect-steps (root)
+  "Lista (ANOTACION FICHERO LINEA) de los steps en los *Context.php de ROOT."
+  (let ((default-directory root) (out '()))
+    (dolist (line (ignore-errors
+                    (process-lines "rg" "--no-heading" "--line-number" "--no-config"
+                                   "-o" "@(?:Given|When|Then)\\s+(.+?)\\s*$"
+                                   "-r" "$1" "-g" "*Context.php" "-g" "!vendor")))
+      (when (string-match "\\`\\([^:]+\\):\\([0-9]+\\):\\(.*\\)\\'" line)
+        (push (list (match-string 3 line)
+                    (expand-file-name (match-string 1 line) root)
+                    (string-to-number (match-string 2 line)))
+              out)))
+    (nreverse out)))
+
+(defun my/behat--jump (cand)
+  "Abre el fichero y va a la linea de CAND (ANOTACION FICHERO LINEA)."
+  (find-file (nth 1 cand))
+  (goto-char (point-min))
+  (forward-line (1- (nth 2 cand)))
+  (recenter)
+  (when (fboundp 'pulse-momentary-highlight-one-line)
+    (pulse-momentary-highlight-one-line (point))))
+
+(defun my/behat-goto-step ()
+  "Saltar del step Gherkin bajo el cursor a su definicion PHP en los Context."
+  (interactive)
+  (let* ((root (or (and (fboundp 'projectile-project-root)
+                        (ignore-errors (projectile-project-root)))
+                   default-directory))
+         (step (my/behat--strip-keyword (or (thing-at-point 'line t) "")))
+         (matches (cl-remove-if-not
+                   (lambda (c) (let ((re (my/behat--annot->regexp (car c))))
+                                 (and re (string-match-p re step))))
+                   (my/behat--collect-steps root))))
+    (cond
+     ((null matches) (message "Behat: sin definicion para: %s" step))
+     ((= 1 (length matches)) (my/behat--jump (car matches)))
+     (t (let ((choice (completing-read "Step (varias defs): "
+                                       (mapcar #'car matches) nil t)))
+          (my/behat--jump (cl-find choice matches :key #'car :test #'string=)))))))
+
+(after! feature-mode
+  ;; `gd' sobre un step salta a su definicion PHP, como el `gd' de codigo.
+  (map! :map feature-mode-map
+        :n "gd" #'my/behat-goto-step
+        :localleader "g" #'my/behat-goto-step))
+
+;; ═══════════════════════════════════════════════════════════════════════
+;; LSP: resaltar usos de un simbolo (lectura/escritura) estilo IntelliJ
+;; ═══════════════════════════════════════════════════════════════════════
+;; Al dejar el cursor sobre una variable/simbolo, el LSP (Intelephense en PHP)
+;; resalta TODAS sus apariciones en el fichero, distinguiendo lectura,
+;; escritura y texto. Doom lo trae DESACTIVADO; lo activamos y damos colores
+;; distintos a lectura (verde) y escritura (rojo), como el read/write
+;; highlighting del IDE. Las 3 caras venian del mismo azul -> no distinguian.
+(after! lsp-mode
+  (setq lsp-enable-symbol-highlighting t))
+
+(custom-set-faces!
+  '(lsp-face-highlight-read    :background "#2e4636" :underline nil)              ; lectura: verde
+  '(lsp-face-highlight-write   :background "#5c3a3a" :weight bold :underline nil) ; escritura: rojo
+  '(lsp-face-highlight-textual :background "#3a3f4b" :underline nil))             ; texto: neutro
+
 ;;; config.el ends here

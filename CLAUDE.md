@@ -215,6 +215,13 @@ severidad:
 
 ### MEDIO
 
+- [ ] **org-gcal: ID de calendario + nombres personales en repo PUBLICO**
+  (config.el:343-348). El calendar ID `family` y un comentario con nombres
+  propios estan hardcodeados aqui (repo publico). Sacar el ID a agenix
+  (patron `my/get-FOO`) y limpiar el comentario a generico. No es token
+  (no da acceso directo) pero es info personal. Anotado 2026-06-08, dejado
+  para luego por decision de Pascual.
+
 - [ ] **`projectile-project-search-path` redundante/peligroso**
   (config.el:405). `~/` escanea todo el home. `~/src/vocento` es subdir
   de `~/src/`. Reducir a `'("~/src/" "~/dotfiles/")`.
