@@ -870,11 +870,45 @@ Soporta placeholder (:param) y /regex/. Devuelve nil si no compila."
                                        (mapcar #'car matches) nil t)))
           (my/behat--jump (cl-find choice matches :key #'car :test #'string=)))))))
 
+;; --- Ejecutar Behat desde el .feature (escenario bajo cursor o feature entera) ---
+(defvar my/behat-command "bin/behat"
+  "Ejecutable de Behat, relativo a la raiz del proyecto.")
+
+(defvar my/behat-default-args "--tags '~@pendiente'"
+  "Argumentos por defecto de Behat. Ajusta a tu gusto (o pon cadena vacia).")
+
+(defun my/behat--run (&optional line)
+  "Ejecuta Behat sobre el .feature del buffer, desde la raiz del proyecto.
+Si LINE se da, corre SOLO el escenario que empieza en esa linea (fichero:LINE).
+Hereda el entorno del buffer (envrc/nix), igual que en la terminal."
+  (let* ((root (or (and (fboundp 'projectile-project-root)
+                        (ignore-errors (projectile-project-root)))
+                   default-directory))
+         (rel (file-relative-name (buffer-file-name) root))
+         (target (if line (format "%s:%d" rel line) rel))
+         (default-directory root))
+    (compile (string-trim (format "%s %s %s" my/behat-command my/behat-default-args target)))))
+
+(defun my/behat-run-scenario ()
+  "Ejecuta con Behat solo el escenario bajo el cursor."
+  (interactive)
+  (my/behat--run (line-number-at-pos)))
+
+(defun my/behat-run-feature ()
+  "Ejecuta con Behat toda la feature del buffer."
+  (interactive)
+  (my/behat--run))
+
 (after! feature-mode
-  ;; `gd' sobre un step salta a su definicion PHP, como el `gd' de codigo.
+  ;; El runner nativo de feature-mode apunta a Behat, no a cucumber (Ruby).
+  (setq feature-cucumber-command "bin/behat {options} \"{feature}\"")
   (map! :map feature-mode-map
+        ;; `gd' sobre un step salta a su definicion PHP, como el `gd' de codigo.
         :n "gd" #'my/behat-goto-step
-        :localleader "g" #'my/behat-goto-step))
+        :localleader
+        "g" #'my/behat-goto-step
+        "v" #'my/behat-run-scenario    ; SPC m v: escenario bajo el cursor
+        "V" #'my/behat-run-feature))   ; SPC m V: feature entera
 
 ;; ═══════════════════════════════════════════════════════════════════════
 ;; LSP: resaltar usos de un simbolo (lectura/escritura) estilo IntelliJ
