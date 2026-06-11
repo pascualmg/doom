@@ -855,9 +855,7 @@ Soporta placeholder (:param) y /regex/. Devuelve nil si no compila."
 (defun my/behat-goto-step ()
   "Saltar del step Gherkin bajo el cursor a su definicion PHP en los Context."
   (interactive)
-  (let* ((root (or (and (fboundp 'projectile-project-root)
-                        (ignore-errors (projectile-project-root)))
-                   default-directory))
+  (let* ((root (my/behat--root))
          (step (my/behat--strip-keyword (or (thing-at-point 'line t) "")))
          (matches (cl-remove-if-not
                    (lambda (c) (let ((re (my/behat--annot->regexp (car c))))
@@ -877,13 +875,24 @@ Soporta placeholder (:param) y /regex/. Devuelve nil si no compila."
 (defvar my/behat-default-args "--tags '~@pendiente'"
   "Argumentos por defecto de Behat. Ajusta a tu gusto (o pon cadena vacia).")
 
+(defun my/behat--root ()
+  "Raiz del proyecto Behat REAL: el dir ancestro que contiene bin/behat
+\(el microservicio), no el super-proyecto de projectile. Asi funciona aunque
+tengas activo un proyecto-paraguas que agrupa varios micros. Cae a behat.yml,
+luego a projectile, luego al directorio actual."
+  (let ((file (or (buffer-file-name) default-directory)))
+    (expand-file-name
+     (or (locate-dominating-file
+          file (lambda (d) (file-exists-p (expand-file-name "bin/behat" d))))
+         (locate-dominating-file file "behat.yml")
+         (and (fboundp 'projectile-project-root) (ignore-errors (projectile-project-root)))
+         default-directory))))
+
 (defun my/behat--run (&optional line)
-  "Ejecuta Behat sobre el .feature del buffer, desde la raiz del proyecto.
+  "Ejecuta Behat sobre el .feature del buffer, desde la raiz del MICRO.
 Si LINE se da, corre SOLO el escenario que empieza en esa linea (fichero:LINE).
 Hereda el entorno del buffer (envrc/nix), igual que en la terminal."
-  (let* ((root (or (and (fboundp 'projectile-project-root)
-                        (ignore-errors (projectile-project-root)))
-                   default-directory))
+  (let* ((root (my/behat--root))
          (rel (file-relative-name (buffer-file-name) root))
          (target (if line (format "%s:%d" rel line) rel))
          (default-directory root))
