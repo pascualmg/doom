@@ -1,24 +1,30 @@
+#+TITLE: Mi configuración de Doom Emacs (literate)
+#+PROPERTY: header-args:emacs-lisp :tangle config.el :comments no :results none
+
+Configuración de Doom organizada en secciones. Es un documento
+/literate/: edito este =.org= (prosa + bloques de Elisp) y Doom ensambla
+el =config.el= real al hacer =doom sync=.
+
+La primera línea fija el /lexical binding/ (importante para closures):
+
+#+begin_src emacs-lisp
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
+#+end_src
 
-;;; Commentary:
-;; Configuración personal de Doom Emacs
-;; Organizada en secciones lógicas para mejor mantenimiento
+* CONFIGURACIÓN BÁSICA
 
-;;; Code:
-
-;; ════════════════════════════════════════════════════════════════════════════
-;; CONFIGURACIÓN BÁSICA
-;; ════════════════════════════════════════════════════════════════════════════
+#+begin_src emacs-lisp
 
 (setq user-full-name "Pascual M.G."
       user-mail-address "info@pascualmg.dev")
 
 ;; Silenciar warning de PGTK en X11 (funciona bien, solo avisa)
 (setq warning-minimum-level :emergency)
+#+end_src
 
-;; ════════════════════════════════════════════════════════════════════════════
-;; SISTEMA Y PATHS (Nix Integration)
-;; ════════════════════════════════════════════════════════════════════════════
+* SISTEMA Y PATHS (Nix Integration)
+
+#+begin_src emacs-lisp
 
 ;; Configuración de PATH para Nix
 (defun setup-nix-paths ()
@@ -43,10 +49,11 @@
                (if (executable-find cmd)
                    (propertize "✓ FOUND" 'face 'success)
                  (propertize "✗ NOT FOUND" 'face 'error))))))
+#+end_src
 
-;; ════════════════════════════════════════════════════════════════════════════
-;; INTERFAZ Y APARIENCIA
-;; ════════════════════════════════════════════════════════════════════════════
+* INTERFAZ Y APARIENCIA
+
+#+begin_src emacs-lisp
 
 ;; --- Transparencia (compatible PGTK/Wayland y X11) ---
 (defun set-frame-transparency (value)
@@ -229,10 +236,11 @@ Para anadir mas para el selector interactivo: `change-font'.")
 (use-package! doom-themes
   :config
   (setq doom-themes-org-font "-apple-Pacifico-Regular-normal-normal-*-14-*-*-*-m-0-iso10646-1"))
+#+end_src
 
-;; ════════════════════════════════════════════════════════════════════════════
-;; ORG MODE
-;; ════════════════════════════════════════════════════════════════════════════
+* ORG MODE
+
+#+begin_src emacs-lisp
 
 (setq org-directory "~/org/"
       org-roam-directory "~/org/roam")
@@ -285,10 +293,11 @@ Para anadir mas para el selector interactivo: `change-font'.")
 
   (make-directory org-journal-dir t)
   (setq org-agenda-files (append org-agenda-files (list org-journal-dir))))
+#+end_src
 
-;; ════════════════════════════════════════════════════════════════════════════
-;; GOOGLE CALENDAR (org-gcal + calfw)
-;; ════════════════════════════════════════════════════════════════════════════
+* GOOGLE CALENDAR (org-gcal + calfw)
+
+#+begin_src emacs-lisp
 
 ;; Lee credenciales OAuth de agenix -> pass -> warn (mismo patron que
 ;; my/get-intelephense-key). Devuelve (cons client-id client-secret) o nil.
@@ -413,10 +422,11 @@ Orden: agenix -> pass -> nil + warn."
       (when (and clip-output (> (length clip-output) 0))
         (insert (format "[[file:%s]]" image-path))
         (message "Image inserted: %s" image-path)))))
+#+end_src
 
-;; ════════════════════════════════════════════════════════════════════════════
-;; LENGUAJES DE PROGRAMACIÓN
-;; ════════════════════════════════════════════════════════════════════════════
+* LENGUAJES DE PROGRAMACIÓN
+
+#+begin_src emacs-lisp
 
 ;; --- Babel ---
 (org-babel-do-load-languages
@@ -518,10 +528,11 @@ Orden: agenix -> pass -> nil + warn."
   (setq-local lsp-enable-file-watchers nil
               lsp-enable-indentation nil)
   (lsp-deferred))
+#+end_src
 
-;; ════════════════════════════════════════════════════════════════════════════
-;; HERRAMIENTAS DE DESARROLLO
-;; ════════════════════════════════════════════════════════════════════════════
+* HERRAMIENTAS DE DESARROLLO
+
+#+begin_src emacs-lisp
 
 ;; --- Projectile ---
 ;; search-path: ~/src/ recursivo + ~/dotfiles. Vocento esta en ~/src/vocento
@@ -595,20 +606,22 @@ Orden: agenix -> pass -> nil + warn."
         gptel-default-mode 'org-mode
         gptel-directives
         '((default . "Eres un asistente AI especializado en Emacs Doom, Haskell, y configuración de entornos de desarrollo. Proporciona atajos de Doom Emacs cuando sea relevante."))))
+#+end_src
 
-;; ════════════════════════════════════════════════════════════════════════════
-;; FUNCIONES PERSONALIZADAS
-;; ════════════════════════════════════════════════════════════════════════════
+* FUNCIONES PERSONALIZADAS
+
+#+begin_src emacs-lisp
 
 (defun copy-whole-buffer-to-clipboard ()
   "Copy entire buffer to clipboard."
   (interactive)
   (clipboard-kill-ring-save (point-min) (point-max))
   (message "Buffer copied to clipboard"))
+#+end_src
 
-;; ════════════════════════════════════════════════════════════════════════════
-;; KEYBINDINGS
-;; ════════════════════════════════════════════════════════════════════════════
+* KEYBINDINGS
+
+#+begin_src emacs-lisp
 
 (map! :leader
       ;; Toggle
@@ -642,10 +655,11 @@ Orden: agenix -> pass -> nil + warn."
 
 ;; Keybinding global para insertar imágenes
 (global-set-key (kbd "S-<print>") 'brutalist-clipboard-png-insert)
+#+end_src
 
-;; ════════════════════════════════════════════════════════════════════════════
-;; CONFIGURACIÓN HASKELL + HLS
-;; ════════════════════════════════════════════════════════════════════════════
+* CONFIGURACIÓN HASKELL + HLS
+
+#+begin_src emacs-lisp
 
 ;; Configuración mínima: Doom maneja todo automáticamente con +lsp +tree-sitter
 ;; Ver guía completa de comandos en: ~/src/pensando-en-haskell/README.org
@@ -661,15 +675,18 @@ Orden: agenix -> pass -> nil + warn."
 ;; ademas peta con caracteres unicode en el codigo. Desactivado.
 (after! flycheck
   (add-to-list 'flycheck-disabled-checkers 'haskell-stack-ghc))
-;; ════════════════════════════════════════════════════════════════════════════
-;; NIX-MODE FIX
-;; ════════════════════════════════════════════════════════════════════════════
+#+end_src
+
+* NIX-MODE FIX
+
+#+begin_src emacs-lisp
 ;; Fix: font-lock no se activa automáticamente en algunos casos
 (add-hook 'nix-mode-hook #'font-lock-ensure)
+#+end_src
 
-;; ════════════════════════════════════════════════════════════════════════════
-;; DAPE - Debug Adapter Protocol
-;; ════════════════════════════════════════════════════════════════════════════
+* DAPE - Debug Adapter Protocol
+
+#+begin_src emacs-lisp
 
 ;; Función para instalar vscode-php-debug automáticamente
 (defun dape-ensure-php-debug-adapter ()
@@ -789,10 +806,11 @@ Orden: agenix -> pass -> nil + warn."
       (delete-directory adapter-dir t)
       (message "🗑️  Adaptador anterior eliminado"))
     (dape-ensure-php-debug-adapter)))
+#+end_src
 
-;; ═══════════════════════════════════════════════════════════════════════
-;; BEHAT: saltar de un step Gherkin a su definicion PHP (estilo PhpStorm)
-;; ═══════════════════════════════════════════════════════════════════════
+* BEHAT: saltar de un step Gherkin a su definicion PHP (estilo PhpStorm)
+
+#+begin_src emacs-lisp
 ;; En un .feature, `gd' sobre un step (Given/When/Then) salta al metodo PHP
 ;; cuya anotacion @Given/@When/@Then casa con el. Soporta placeholders
 ;; (:param) y /regex/. Si varios casan, ofrece elegir. Indexa los Context
@@ -918,10 +936,11 @@ Hereda el entorno del buffer (envrc/nix), igual que en la terminal."
         "g" #'my/behat-goto-step
         "v" #'my/behat-run-scenario    ; SPC m v: escenario bajo el cursor
         "V" #'my/behat-run-feature))   ; SPC m V: feature entera
+#+end_src
 
-;; ═══════════════════════════════════════════════════════════════════════
-;; LSP: resaltar usos de un simbolo (lectura/escritura) estilo IntelliJ
-;; ═══════════════════════════════════════════════════════════════════════
+* LSP: resaltar usos de un simbolo (lectura/escritura) estilo IntelliJ
+
+#+begin_src emacs-lisp
 ;; Al dejar el cursor sobre una variable/simbolo, el LSP (Intelephense en PHP)
 ;; resalta TODAS sus apariciones en el fichero, distinguiendo lectura,
 ;; escritura y texto. Doom lo trae DESACTIVADO; lo activamos y damos colores
@@ -934,10 +953,11 @@ Hereda el entorno del buffer (envrc/nix), igual que en la terminal."
   '(lsp-face-highlight-read    :background "#2e4636" :underline nil)              ; lectura: verde
   '(lsp-face-highlight-write   :background "#5c3a3a" :weight bold :underline nil) ; escritura: rojo
   '(lsp-face-highlight-textual :background "#3a3f4b" :underline nil))             ; texto: neutro
+#+end_src
 
-;; ═══════════════════════════════════════════════════════════════════════
-;; TRAMP / sudo en NixOS (arreglar sudo-this-file)
-;; ═══════════════════════════════════════════════════════════════════════
+* TRAMP / sudo en NixOS (arreglar sudo-this-file)
+
+#+begin_src emacs-lisp
 ;; sudo-this-file (TRAMP /sudo::) fallaba con "sudo: ... must be owned by
 ;; uid 0 and have the setuid bit set": TRAMP cogia el sudo de
 ;; /run/current-system/sw/bin (SIN setuid) en vez del wrapper setuid de
@@ -947,5 +967,63 @@ Hereda el entorno del buffer (envrc/nix), igual que en la terminal."
 (after! tramp
   (cl-pushnew "/run/wrappers/bin" exec-path :test #'string=)
   (add-to-list 'tramp-remote-path 'tramp-own-remote-path))
+#+end_src
 
-;;; config.el ends here
+* ESTÉTICA ORG (look "revista")
+Hace que cualquier =.org= se vea precioso: la prosa en fuente proporcional
+(de libro), los títulos grandes, y bullets/bloques/tablas con estilo moderno.
+Tres ingredientes:
+- *mixed-pitch*: usa una fuente proporcional para el texto y deja la
+  monoespaciada solo para el código.
+- *org-modern*: pinta headings, listas, bloques y tablas con estilo moderno.
+- *org-appear*: oculta los marcadores =*= =/= y los muestra solo al pasar el
+  cursor por encima (texto limpio pero cómodo de editar).
+
+#+begin_src emacs-lisp
+;; Prosa en fuente proporcional; el codigo se queda en monoespaciada.
+(add-hook 'org-mode-hook #'mixed-pitch-mode)
+
+;; Ocultar los marcadores de enfasis; org-appear los enseña al pasar el cursor.
+(setq org-hide-emphasis-markers t
+      org-pretty-entities t)
+(add-hook 'org-mode-hook #'org-appear-mode)
+
+;; org-modern: el toque "revista" (headings, bullets, bloques, tablas).
+(add-hook 'org-mode-hook #'org-modern-mode)
+(after! org-modern
+  (setq org-modern-star 'replace
+        org-modern-table t
+        org-modern-block-fringe nil))
+
+;; Titulos grandes (escala decreciente). Dentro de `after! org' para que se
+;; apliquen cuando las caras org-level YA existen; si no, el theme las pisa
+;; al arrancar (lo aprendimos a base de "por que no se hace grande").
+(after! org
+  (custom-set-faces!
+    '(org-document-title :height 1.8 :weight bold)
+    '(org-level-1 :height 1.6 :weight bold)
+    '(org-level-2 :height 1.35 :weight bold)
+    '(org-level-3 :height 1.2 :weight bold)
+    '(org-level-4 :height 1.1 :weight bold)))
+#+end_src
+
+* PRESENTACIONES CON ORG (slides para el curro)
+Convierte un =.org= en una presentación: cada =* titulo= es una diapositiva.
+=M-x org-present= entra en modo slides (texto gigante, centrado); navegas con
+las flechas y sales con =C-c C-q=. Combinado con el look de arriba, queda de
+conferencia.
+
+#+begin_src emacs-lisp
+(after! org-present
+  (add-hook 'org-present-mode-hook
+            (lambda ()
+              (org-present-big)            ; texto gigante
+              (org-display-inline-images)  ; muestra las imagenes
+              (org-modern-mode 1)
+              (read-only-mode 1)))         ; evita editar sin querer al pasar slides
+  (add-hook 'org-present-mode-quit-hook
+            (lambda ()
+              (org-present-small)
+              (org-remove-inline-images)
+              (read-only-mode -1))))
+#+end_src

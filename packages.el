@@ -90,3 +90,7 @@
 ;; lsp-mode y php-mode vienen con los modulos Doom (:tools lsp, :lang php),
 ;; no declarar aqui. feature-mode (Gherkin/Cucumber) si es extra.
 (package! feature-mode)
+
+;; ── Estetica org: look "revista" para .org y presentaciones ──
+(package! org-modern)   ; headings, bullets, bloques y tablas modernos
+(package! org-appear)   ; muestra el markup (*,/,=) solo al pasar el cursor
