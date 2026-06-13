@@ -935,4 +935,17 @@ Hereda el entorno del buffer (envrc/nix), igual que en la terminal."
   '(lsp-face-highlight-write   :background "#5c3a3a" :weight bold :underline nil) ; escritura: rojo
   '(lsp-face-highlight-textual :background "#3a3f4b" :underline nil))             ; texto: neutro
 
+;; ═══════════════════════════════════════════════════════════════════════
+;; TRAMP / sudo en NixOS (arreglar sudo-this-file)
+;; ═══════════════════════════════════════════════════════════════════════
+;; sudo-this-file (TRAMP /sudo::) fallaba con "sudo: ... must be owned by
+;; uid 0 and have the setuid bit set": TRAMP cogia el sudo de
+;; /run/current-system/sw/bin (SIN setuid) en vez del wrapper setuid de
+;; NixOS en /run/wrappers/bin. Aseguramos que el wrapper gane en el PATH.
+(unless (string-prefix-p "/run/wrappers/bin" (or (getenv "PATH") ""))
+  (setenv "PATH" (concat "/run/wrappers/bin:" (getenv "PATH"))))
+(after! tramp
+  (cl-pushnew "/run/wrappers/bin" exec-path :test #'string=)
+  (add-to-list 'tramp-remote-path 'tramp-own-remote-path))
+
 ;;; config.el ends here
