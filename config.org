@@ -1039,3 +1039,19 @@ conferencia.
               (org-remove-inline-images)
               (read-only-mode -1))))
 #+end_src
+
+* RENDIMIENTO (fluidez del LSP)
+Lo que mas se nota en el dia a dia con PHP/Intelephense.
+=read-process-output-max= es la optimizacion estrella: el valor por defecto
+(4 KB) ahoga al servidor de lenguaje; subirlo a 1 MB deja fluir las respuestas
+grandes (autocompletado, diagnosticos) sin tartamudeo.
+
+#+begin_src emacs-lisp
+;; Throughput de procesos (LSP, copilot...). El default de 4KB se queda corto.
+(setq read-process-output-max (* 1024 1024))  ; 1 MB
+
+(after! lsp-mode
+  (setq lsp-idle-delay 0.5             ; espera tras teclear antes de pedir al server
+        lsp-log-io nil                 ; no registrar el trafico JSON (mas rapido)
+        lsp-file-watch-threshold 6000)) ; tus micros tienen muchos ficheros: evita el aviso
+#+end_src
