@@ -174,9 +174,21 @@ Para anadir mas para el selector interactivo: `change-font'.")
 ;; caen a un fallback chico (Hack 13 en vez de tu 18). Y los frames TTY no
 ;; cogen el fondo del theme. Re-aplicar fuente + fondo al crear cada frame,
 ;; cuando ya hay display y find-font/doom-color funcionan.
+(defun my/ensure-doom-theme ()
+  "Carga el theme de Doom si aun no esta activo. En daemon el theme a veces
+no se aplica hasta tener pantalla (frame grafico): sin el, todas las caras
+salen sin color (el 'blanco feo'). Esto lo asegura al crear el frame."
+  (unless custom-enabled-themes
+    (when (and (boundp 'doom-theme) doom-theme)
+      (load-theme doom-theme t))))
+
 (when (daemonp)
+  ;; Orden: el theme PRIMERO (da los colores), luego fuente y fondo (que
+  ;; leen doom-color). add-hook apila al principio, asi que el ultimo
+  ;; anadido se ejecuta primero -> ensure-doom-theme va el ultimo.
   (add-hook 'server-after-make-frame-hook #'setup-fonts)
-  (add-hook 'server-after-make-frame-hook #'my/tty-frame-solid-bg))
+  (add-hook 'server-after-make-frame-hook #'my/tty-frame-solid-bg)
+  (add-hook 'server-after-make-frame-hook #'my/ensure-doom-theme))
 
 ;; Comentarios y keywords en cursiva con Victor Mono.
 ;; Linea de ejecucion en dape: magenta Spacemacs, fondo solido,
