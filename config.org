@@ -1055,3 +1055,16 @@ grandes (autocompletado, diagnosticos) sin tartamudeo.
         lsp-log-io nil                 ; no registrar el trafico JSON (mas rapido)
         lsp-file-watch-threshold 6000)) ; tus micros tienen muchos ficheros: evita el aviso
 #+end_src
+
+* NAVEGACION LSP (peek estilo IntelliJ)
+En buffers con LSP, =gr= (eval-region) no hace nada util: no se evalua PHP
+inline como en Lisp. Asi que lo reutilizamos para el *peek de referencias*:
+un popup pegado al cursor con la lista de usos a un lado y el preview del
+codigo al otro, navegable con j/k. Clavado al "Find Usages" de IntelliJ.
+Fuera de LSP (elisp...), =gr= sigue siendo eval-region intacto.
+
+#+begin_src emacs-lisp
+(map! :after lsp-mode
+      :map lsp-mode-map
+      :n "gr" #'lsp-ui-peek-find-references)
+#+end_src
