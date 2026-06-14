@@ -94,3 +94,7 @@
 ;; ── Estetica org: look "revista" para .org y presentaciones ──
 (package! org-modern)   ; headings, bullets, bloques y tablas modernos
 (package! org-appear)   ; muestra el markup (*,/,=) solo al pasar el cursor
+
+;; Grafo interactivo de org-roam en el navegador (D3.js): zoom, click=saltar
+;; al nodo, sigue el nodo actual, tema oscuro. Arrastra websocket/simple-httpd/f.
+(package! org-roam-ui)

@@ -289,6 +289,15 @@ salen sin color (el 'blanco feo'). Esto lo asegura al crear el frame."
 ;; Org-roam
 (org-roam-db-autosync-mode)
 
+;; org-roam-ui: grafo interactivo en el navegador (D3.js). M-x org-roam-ui-mode.
+(use-package! org-roam-ui
+  :after org-roam
+  :config
+  (setq org-roam-ui-sync-theme t          ; usa el tema de Doom
+        org-roam-ui-follow t              ; sigue el nodo donde estas
+        org-roam-ui-update-on-save t      ; refresca el grafo al guardar
+        org-roam-ui-open-on-start nil))   ; no abrir el navegador al arrancar
+
 ;; Org Journal
 (use-package! org-journal
   :config
