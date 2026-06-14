@@ -1056,15 +1056,109 @@ grandes (autocompletado, diagnosticos) sin tartamudeo.
         lsp-file-watch-threshold 6000)) ; tus micros tienen muchos ficheros: evita el aviso
 #+end_src
 
-* NAVEGACION LSP (peek estilo IntelliJ)
+* NAVEGACION LSP (peek estilo IntelliJ + apano para metodos magicos)
 En buffers con LSP, =gr= (eval-region) no hace nada util: no se evalua PHP
 inline como en Lisp. Asi que lo reutilizamos para el *peek de referencias*:
 un popup pegado al cursor con la lista de usos a un lado y el preview del
 codigo al otro, navegable con j/k. Clavado al "Find Usages" de IntelliJ.
 Fuera de LSP (elisp...), =gr= sigue siendo eval-region intacto.
 
+** El GAP de los metodos magicos (y como lo sorteamos)
+Intelephense -como casi todos los servidores LSP- NO liga las invocaciones
+implicitas con su metodo magico: =$handler($cmd)= no cuenta como referencia
+de =__invoke=, ni =new Foo()= como referencia de =__construct=. Resultado:
+pides referencias sobre un metodo magico y salen 0, aunque el patron
+(command handlers, single-action controllers, invokables) se use a diario.
+PhpStorm lo resuelve con su motor PHP propio; el ecosistema LSP libre no
+llega ahi (phpactor lo hizo solo para =__construct=, y ademas no convive con
+Intelephense en lsp-mode: un solo cliente por major-mode).
+
+La salida: el editor es programable. Si el simbolo bajo el cursor es un
+metodo magico, en vez de buscar SUS referencias (que dan 0) buscamos los
+usos de la CLASE que lo contiene -de ahi salen las invocaciones-. Es lo que
+harias a mano, automatizado: pulsas =gr= igual y "simplemente funciona".
+
 #+begin_src emacs-lisp
-(map! :after lsp-mode
-      :map lsp-mode-map
-      :n "gr" #'lsp-ui-peek-find-references)
+(defvar my/php-magic-methods
+  '("__invoke" "__construct" "__destruct" "__get" "__set" "__isset"
+    "__unset" "__call" "__callStatic" "__toString" "__clone" "__sleep"
+    "__wakeup" "__serialize" "__unserialize" "__debugInfo")
+  "Metodos magicos de PHP. Se invocan implicitamente, asi que pedir sus
+referencias por nombre devuelve 0. Para estos saltamos a las referencias
+de la clase contenedora, que es de donde salen las invocaciones.")
+
+(defun my/php--class-name-position ()
+  "Posicion del NOMBRE de la clase/interface/trait/enum del buffer, o nil."
+  (save-excursion
+    (goto-char (point-min))
+    (when (re-search-forward
+           (concat "^[[:space:]]*"
+                   "\\(?:\\(?:final\\|abstract\\|readonly\\)[[:space:]]+\\)*"
+                   "\\(?:class\\|interface\\|trait\\|enum\\)[[:space:]]+"
+                   "\\([A-Za-z_][A-Za-z0-9_]*\\)")
+           nil t)
+      (match-beginning 1))))
+
+(defun my/lsp--references-with-magic (refs-fn)
+  "Ejecuta REFS-FN (una accion de \"find references\") con apano para los
+metodos magicos de PHP: si el simbolo bajo el cursor es uno de ellos -que
+se invoca implicitamente y no tiene referencias por nombre-, busca en su
+lugar los usos de la CLASE contenedora, de donde salen las invocaciones."
+  (let ((sym (thing-at-point 'symbol t)))
+    (if (and (derived-mode-p 'php-mode 'php-ts-mode)
+             sym (member sym my/php-magic-methods))
+        (let ((pos (my/php--class-name-position)))
+          (if pos
+              (progn
+                (message "[smart-refs] %s es magico -> usos de la clase" sym)
+                (save-excursion (goto-char pos) (call-interactively refs-fn)))
+            (call-interactively refs-fn)))
+      (call-interactively refs-fn))))
+
+(defun my/lsp-smart-references ()
+  "Referencias en PEEK inline (estilo IntelliJ), con apano magico.
+Rapido para echar un ojo. Para listas grandes, `my/lsp-smart-references-tree'."
+  (interactive)
+  (my/lsp--references-with-magic #'lsp-ui-peek-find-references))
+
+(defun my/lsp-smart-references-tree ()
+  "Referencias en ARBOL treemacs (ventana lateral), con apano magico.
+Redimensionable y con rutas completas: mejor cuando hay muchas referencias."
+  (interactive)
+  (my/lsp--references-with-magic #'lsp-treemacs-references))
+
+;; El peek de lsp-ui trae 50 de ancho de lista: en un ultrawide se queda
+;; corto y corta las rutas. Le damos aire (y un poco mas de alto).
+(after! lsp-ui
+  (setq lsp-ui-peek-list-width 90
+        lsp-ui-peek-peek-height 30
+        lsp-ui-peek-fontify 'always))  ; colorea la sintaxis siempre (no solo on-demand)
+
+;; OJO con la precedencia: Doom bindea gr/gR (eval) en su keymap "override"
+;; (general), que GANA a cualquier cosa que pongamos en lsp-mode-map (lo
+;; comprobamos: el binding entraba en el aux de lsp-mode-map pero quedaba
+;; tapado). Solucion: bindear GLOBAL un wrapper que decide por modo. En
+;; buffers LSP -> referencias inteligentes; fuera -> el eval de siempre
+;; (call-interactively conserva el comportamiento de operador + motion).
+(defun my/gr-references-dwim ()
+  "gr: referencias inteligentes en peek (LSP) o eval-region (fuera)."
+  (interactive)
+  (if (bound-and-true-p lsp-mode)
+      (my/lsp-smart-references)
+    (call-interactively #'+eval:region)))
+
+(defun my/gR-references-dwim ()
+  "gR: referencias en arbol treemacs (LSP) o eval replace-region (fuera)."
+  (interactive)
+  (if (bound-and-true-p lsp-mode)
+      (my/lsp-smart-references-tree)
+    (call-interactively #'+eval:replace-region)))
+
+;; Lo bindeamos en el keymap "override" de Doom (general), que es justo donde
+;; vive el gr/gR de +eval: asi GANAMOS la precedencia. Un binding en
+;; lsp-mode-map quedaba tapado (verificado con `current-active-maps').
+(general-define-key
+ :states 'normal :keymaps 'override
+ "gr" #'my/gr-references-dwim
+ "gR" #'my/gR-references-dwim)
 #+end_src
