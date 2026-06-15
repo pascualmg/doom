@@ -468,11 +468,22 @@ Orden: agenix -> pass -> nil + warn."
 ;;   2. pass:   personal/intelephense-license (gpg, fuente activa).
 ;;   3. nil + message de aviso.
 (defun my/get-intelephense-key ()
-  "Obtiene la licencia de Intelephense (agenix -> pass -> nil + warn)."
+  "Obtiene la licencia de Intelephense (/run/agenix -> agenix -> pass -> nil)."
   (let* ((secrets-dir (expand-file-name "~/dotfiles/secrets/"))
          (age-file (expand-file-name "intelephense-license.age" secrets-dir))
+         (agenix-runtime "/run/agenix/intelephense-license")
          (key (or
-               ;; 1. agenix (necesita cwd = dir de secrets.nix)
+               ;; 0. /run/agenix: agenix lo descifra al boot con la HOST key
+               ;;    (recipient en TODA maquina) -> simple file read. No depende
+               ;;    de la user key del clon (passh@macbook != passh@aurin) ni
+               ;;    del pinentry de gpg. Es la fuente preferida.
+               (and (file-readable-p agenix-runtime)
+                    (let ((out (string-trim
+                                (with-temp-buffer
+                                  (insert-file-contents agenix-runtime)
+                                  (car (split-string (buffer-string) "\n"))))))
+                      (and (not (string-empty-p out)) out)))
+               ;; 1. agenix CLI (solo si TU user key es recipient, p.ej. aurin)
                (and (executable-find "agenix")
                     (file-readable-p age-file)
                     (let* ((default-directory secrets-dir)
