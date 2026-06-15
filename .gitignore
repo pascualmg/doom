@@ -2,3 +2,4 @@ config.el
 .config.el.bak-literate
 .config.org.bak
 .packages.el.bak
+run-configs.el

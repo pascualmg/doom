@@ -898,7 +898,10 @@ Soporta placeholder (:param) y /regex/. Devuelve nil si no compila."
                                    "-o" "@(?:Given|When|Then)\\s+(.+?)\\s*$"
                                    "-r" "$1" "-g" "*Context.php" "-g" "!vendor")))
       (when (string-match "\\`\\([^:]+\\):\\([0-9]+\\):\\(.*\\)\\'" line)
-        (push (list (match-string 3 line)
+        (push (list (replace-regexp-in-string
+                     ;; docblocks de UNA linea `/** @Then texto */' dejan el
+                     ;; ` */' final pegado a la anotacion; quitarlo o no casa.
+                     "[ \t]*\\*/[ \t]*\\'" "" (match-string 3 line))
                     (expand-file-name (match-string 1 line) root)
                     (string-to-number (match-string 2 line)))
               out)))
@@ -949,15 +952,31 @@ luego a projectile, luego al directorio actual."
          (and (fboundp 'projectile-project-root) (ignore-errors (projectile-project-root)))
          default-directory))))
 
+(defvar my/behat-nix-develop t
+  "Si non-nil y la raiz del proyecto tiene flake.nix, envuelve Behat en
+`nix develop --command' para garantizar php/composer en PATH.")
+
 (defun my/behat--run (&optional line)
   "Ejecuta Behat sobre el .feature del buffer, desde la raiz del MICRO.
 Si LINE se da, corre SOLO el escenario que empieza en esa linea (fichero:LINE).
-Hereda el entorno del buffer (envrc/nix), igual que en la terminal."
+
+Si la raiz tiene flake.nix (y `my/behat-nix-develop'), ENVUELVE el comando
+en `nix develop --command'. Antes heredabamos el entorno del buffer via
+envrc, pero envrc exporta el entorno de forma ASINCRONA: si el test arranca
+antes de que termine, php no esta en PATH y Behat peta con
+`env: php: No such file or directory' (exit 127). El wrap es deterministico."
   (let* ((root (my/behat--root))
          (rel (file-relative-name (buffer-file-name) root))
          (target (if line (format "%s:%d" rel line) rel))
-         (default-directory root))
-    (compile (string-trim (format "%s %s %s" my/behat-command my/behat-default-args target)))))
+         (default-directory root)
+         (inner (string-trim (format "%s %s %s"
+                                     my/behat-command my/behat-default-args target)))
+         (cmd (if (and my/behat-nix-develop
+                       (file-exists-p (expand-file-name "flake.nix" root)))
+                  (format "nix develop --command bash -c %s"
+                          (shell-quote-argument inner))
+                inner)))
+    (compile cmd)))
 
 (defun my/behat-run-scenario ()
   "Ejecuta con Behat solo el escenario bajo el cursor."
@@ -969,6 +988,47 @@ Hereda el entorno del buffer (envrc/nix), igual que en la terminal."
   (interactive)
   (my/behat--run))
 
+(defvar my/behat-xdebug-port 9003
+  "Puerto donde escucha el listener de dape (phpListen) para Xdebug 3.")
+
+(defun my/behat--debug-run (&optional line)
+  "Como `my/behat--run' pero ARRANCA una sesion de Xdebug.
+Lanza php con xdebug.mode=debug + start_with_request=yes apuntando al
+listener de dape (`my/behat-xdebug-port'), de modo que el proceso de
+behat se conecta a dape y PARA en tus breakpoints.
+
+PRE-REQUISITOS (en este orden):
+  1. Pon breakpoints en el codigo PHP (FeatureContext, dominio...).
+  2. Levanta el listener: M-x dape -> phpListen.
+  3. Entonces SPC m d sobre el escenario.
+Sin el listener arriba, php intenta conectar al 9003 y nadie descuelga
+(no rompe, solo corre sin parar)."
+  (let* ((root (my/behat--root))
+         (rel (file-relative-name (buffer-file-name) root))
+         (target (if line (format "%s:%d" rel line) rel))
+         (default-directory root)
+         (php-flags (format (concat "-dxdebug.mode=debug "
+                                    "-dxdebug.start_with_request=yes "
+                                    "-dxdebug.client_host=127.0.0.1 "
+                                    "-dxdebug.client_port=%d")
+                            my/behat-xdebug-port))
+         ;; `php <flags> bin/behat' en vez de `bin/behat' directo: asi
+         ;; inyectamos los -d de Xdebug (el shebang no deja pasarlos).
+         (inner (string-trim (format "php %s %s %s %s"
+                                     php-flags my/behat-command
+                                     my/behat-default-args target)))
+         (cmd (if (and my/behat-nix-develop
+                       (file-exists-p (expand-file-name "flake.nix" root)))
+                  (format "nix develop --command bash -c %s"
+                          (shell-quote-argument inner))
+                inner)))
+    (compile cmd)))
+
+(defun my/behat-debug-scenario ()
+  "Debuggea con dape/Xdebug el escenario bajo el cursor (para en breakpoints)."
+  (interactive)
+  (my/behat--debug-run (line-number-at-pos)))
+
 (after! feature-mode
   ;; El runner nativo de feature-mode apunta a Behat, no a cucumber (Ruby).
   (setq feature-cucumber-command "bin/behat {options} \"{feature}\"")
@@ -978,7 +1038,99 @@ Hereda el entorno del buffer (envrc/nix), igual que en la terminal."
         :localleader
         "g" #'my/behat-goto-step
         "v" #'my/behat-run-scenario    ; SPC m v: escenario bajo el cursor
-        "V" #'my/behat-run-feature))   ; SPC m V: feature entera
+        "V" #'my/behat-run-feature     ; SPC m V: feature entera
+        "d" #'my/behat-debug-scenario  ; SPC m d: debug escenario con Xdebug
+        "a" #'my/run-config-save-last  ; SPC m a: dar de ALTA la ultima ejecucion
+        "l" #'my/run-config-launch))   ; SPC m l: lanzar una run-config guardada
+
+;; "Rerun" estilo IntelliJ: re-lanza el ULTIMO test/comando desde DONDE SEA
+;; (incluido tu buffer PHP mientras debuggeas), sin volver al .feature.
+;; `recompile' recuerda el comando Y el directorio (el nix develop incluido).
+;; Flujo: SPC m d una vez en el feature -> luego F5, F5, F5... las 100 veces.
+(map! "<f5>" #'recompile)
+#+end_src
+
+* Run configurations estilo IntelliJ
+
+IntelliJ tiene un desplegable de "configuraciones de ejecucion" con nombre:
+las das de alta una vez y las relanzas con un click. Esto replica lo esencial
+sin paquetes externos, encima de =compile=.
+
+Filosofia: corres algo (=SPC m V=, =SPC m d=, o cualquier =compile=), lo das
+de ALTA con un nombre, y luego lo eliges y lo lanzas desde donde sea. Cada
+config guarda el COMANDO y el DIRECTORIO exactos (con su =nix develop= y los
+flags de Xdebug si era un debug), asi que se reproduce identico.
+
+| Quiero...                          | Pulso        |
+|------------------------------------+--------------|
+| Relanzar la ULTIMA ejecucion       | =F5=         |
+| Dar de ALTA la ultima (con nombre) | =SPC m a=    |
+| Elegir y lanzar una guardada       | =F6=         |
+| (tambien) elegir y lanzar          | =SPC m l=    |
+| Borrar una guardada                | =M-x my/run-config-delete= |
+
+Persisten en =run-configs.el= (gitignored, son rutas/comandos locales).
+
+#+begin_src emacs-lisp
+(defvar my/run-configs-file (expand-file-name "run-configs.el" doom-user-dir)
+  "Fichero donde se persisten las run-configs.")
+
+(defvar my/run-configs nil
+  "Alist (NOMBRE . (COMANDO . DIRECTORIO)) de configuraciones guardadas.")
+
+(defun my/run-configs--load ()
+  "Carga las run-configs del disco a `my/run-configs'."
+  (when (file-exists-p my/run-configs-file)
+    (with-temp-buffer
+      (insert-file-contents my/run-configs-file)
+      (setq my/run-configs (ignore-errors (read (buffer-string)))))))
+
+(defun my/run-configs--persist ()
+  "Guarda `my/run-configs' en disco."
+  (with-temp-file my/run-configs-file
+    (prin1 my/run-configs (current-buffer))))
+
+(defun my/run-config--last-compilation ()
+  "Devuelve (COMANDO . DIR) de la compilacion mas reciente, o nil."
+  (let ((buf (seq-find
+              (lambda (b) (with-current-buffer b
+                            (and (derived-mode-p 'compilation-mode)
+                                 (bound-and-true-p compilation-arguments))))
+              (buffer-list))))
+    (when buf
+      (with-current-buffer buf
+        (cons (car compilation-arguments) default-directory)))))
+
+(defun my/run-config-save-last (name)
+  "Da de alta la ULTIMA ejecucion (compile/recompile) como run-config NAME."
+  (interactive "sNombre de la run-config: ")
+  (let ((last (my/run-config--last-compilation)))
+    (unless last (user-error "No hay ninguna ejecucion reciente que guardar"))
+    (setf (alist-get name my/run-configs nil nil #'string=) last)
+    (my/run-configs--persist)
+    (message "Run-config guardada: %s  [%s]" name (car last))))
+
+(defun my/run-config-launch (name)
+  "Elige y lanza la run-config NAME desde su directorio original."
+  (interactive
+   (list (completing-read "Lanzar run-config: "
+                          (mapcar #'car my/run-configs) nil t)))
+  (let ((cfg (cdr (assoc name my/run-configs))))
+    (unless cfg (user-error "No existe la run-config: %s" name))
+    (let ((default-directory (cdr cfg)))
+      (compile (car cfg)))))
+
+(defun my/run-config-delete (name)
+  "Borra la run-config NAME."
+  (interactive
+   (list (completing-read "Borrar run-config: "
+                          (mapcar #'car my/run-configs) nil t)))
+  (setq my/run-configs (assoc-delete-all name my/run-configs))
+  (my/run-configs--persist)
+  (message "Run-config borrada: %s" name))
+
+(my/run-configs--load)
+(map! "<f6>" #'my/run-config-launch)
 #+end_src
 
 * LSP: resaltar usos de un simbolo (lectura/escritura) estilo IntelliJ
