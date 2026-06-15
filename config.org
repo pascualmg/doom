@@ -491,12 +491,10 @@ Orden: agenix -> pass -> nil + warn."
     key))
 
 (after! lsp-mode
-  ;; Rendimiento LSP: chunks grandes para outputs voluminosos (intelephense).
-  ;; gc-cons-threshold lo gestiona gcmh-mode (dinamico, ya activo en Doom),
-  ;; NO forzar valor estatico aqui (rompe gcmh y peligroso en RAM baja).
-  (setq read-process-output-max (* 1024 1024)   ; 1MB chunks
-        lsp-idle-delay 0.5
-        lsp-log-io nil)  ; Activar solo para debug
+  ;; Rendimiento LSP general (read-process-output-max, lsp-idle-delay,
+  ;; lsp-log-io, lsp-file-watch-threshold): centralizado en la seccion
+  ;; RENDIMIENTO mas abajo, fuente unica de verdad. gc-cons-threshold lo
+  ;; gestiona gcmh-mode (NO forzar valor estatico). Aqui solo Intelephense.
 
   ;; Configuración de Intelephense
   (setq lsp-intelephense-licence-key (or (my/get-intelephense-key) "")
