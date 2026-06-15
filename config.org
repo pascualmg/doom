@@ -296,7 +296,20 @@ salen sin color (el 'blanco feo'). Esto lo asegura al crear el frame."
   (setq org-roam-ui-sync-theme t          ; usa el tema de Doom
         org-roam-ui-follow t              ; sigue el nodo donde estas
         org-roam-ui-update-on-save t      ; refresca el grafo al guardar
-        org-roam-ui-open-on-start nil))   ; no abrir el navegador al arrancar
+        org-roam-ui-open-on-start t)      ; al activar el modo, abre el grafo
+
+  ;; FIX IPv6: org-roam-ui sirve por 127.0.0.1, pero `org-roam-ui-open' abre
+  ;; por "localhost", que en este sistema resuelve a ::1 (IPv6). La pagina
+  ;; carga (HTTP cae a IPv4) pero el WEBSOCKET (puerto+2) pega contra ::1 y no
+  ;; engancha -> el grafo se queda "cargando" eterno. Forzamos IPv4 en la URL
+  ;; para que pagina y websocket vayan al mismo 127.0.0.1.
+  (defun my/org-roam-ui-open ()
+    "Como `org-roam-ui-open' pero por 127.0.0.1 (evita el cuelgue IPv6/::1)."
+    (interactive)
+    (unless (bound-and-true-p org-roam-ui-mode) (org-roam-ui-mode))
+    (funcall org-roam-ui-browser-function
+             (format "http://127.0.0.1:%d" org-roam-ui-port)))
+  (advice-add 'org-roam-ui-open :override #'my/org-roam-ui-open))
 
 ;; Org Journal
 (use-package! org-journal
