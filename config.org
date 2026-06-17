@@ -1217,6 +1217,36 @@ Tres ingredientes:
     (font-lock-flush) (font-lock-ensure)
     (message "Org pretty (revista): %s" (if on "ON" "OFF (plano)"))))
 (map! :leader :desc "Org pretty (revista)" "t o" #'my/org-pretty-toggle)
+
+;; --- Probador de fuente de prosa (variable-pitch) EN VIVO ---
+;; M-x my/org-prose-font -> elige una y se aplica al instante (sin reiniciar).
+;; Asi pruebas el look revista con distintas fuentes. La que mas mole la
+;; fijamos como doom-variable-pitch-font definitiva.
+;; Truco: las "Nerd Font Propo" son la version PROPORCIONAL (sirven para prosa);
+;; las "Nerd Font Mono" son monoespaciadas (para codigo).
+(defvar my/org-prose-fonts
+  '("CaskaydiaCove Nerd Font Propo"
+    "CodeNewRoman Nerd Font Propo"
+    "DroidSansM Nerd Font Propo"
+    "DejaVuSansM Nerd Font Propo"
+    "Cousine Nerd Font Propo"
+    "EnvyCodeR Nerd Font Propo"
+    "Overpass"
+    "Noto Sans"
+    "Liberation Sans"
+    "DejaVu Sans"
+    "Hack Nerd Font")
+  "Candidatas para la fuente de prosa (probar con `my/org-prose-font').")
+
+(defun my/org-prose-font (family)
+  "Cambia EN VIVO la fuente de prosa (variable-pitch). Para probar fuentes."
+  ;; Ofrece TODAS las fuentes instaladas (font-family-list); si no hay frame
+  ;; grafico cae a la lista curada. Asi salen Monoid, ComicShannsMono, etc.
+  (interactive (list (completing-read "Fuente de prosa: " (or (font-family-list) my/org-prose-fonts) nil nil)))
+  (set-face-attribute 'variable-pitch nil :family family)
+  (when (boundp 'doom-variable-pitch-font)
+    (setq doom-variable-pitch-font (font-spec :family family :size 18)))
+  (message "Prosa (variable-pitch) ahora: %s" family))
 #+end_src
 
 * PRESENTACIONES CON ORG (slides para el curro)
