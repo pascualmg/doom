@@ -1200,6 +1200,23 @@ Tres ingredientes:
     '(org-level-2 :height 1.35 :weight bold)
     '(org-level-3 :height 1.2 :weight bold)
     '(org-level-4 :height 1.1 :weight bold)))
+
+;; --- Toggle del look "revista" (SPC t o) ---
+;; El look se activa por defecto (hooks de arriba). Esto permite QUITARLO o
+;; PONERLO en el buffer actual cuando quieres editar en plano: ver los
+;; marcadores =*= =/=, fuente monoespaciada, entidades sin renderizar.
+(defun my/org-pretty-toggle ()
+  "Activa/desactiva el look revista (org-modern + mixed-pitch + org-appear) en ESTE buffer."
+  (interactive)
+  (let ((on (not (bound-and-true-p org-modern-mode))))
+    (mixed-pitch-mode (if on 1 -1))
+    (org-modern-mode (if on 1 -1))
+    (org-appear-mode (if on 1 -1))
+    (setq-local org-hide-emphasis-markers on
+                org-pretty-entities on)
+    (font-lock-flush) (font-lock-ensure)
+    (message "Org pretty (revista): %s" (if on "ON" "OFF (plano)"))))
+(map! :leader :desc "Org pretty (revista)" "t o" #'my/org-pretty-toggle)
 #+end_src
 
 * PRESENTACIONES CON ORG (slides para el curro)
