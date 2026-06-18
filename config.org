@@ -9,6 +9,14 @@ La primera línea fija el /lexical binding/ (importante para closures):
 
 #+begin_src emacs-lisp
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
+
+;; FIX CRASH (2026-06-18): unicode-fonts-setup peta con SIGSEGV en fontset-info
+;; al crear el PRIMER frame grafico (apareció tras el upgrade de Doom + fuentes
+;; nuevas). Sintoma: Mod+e no abre / "varias instancias" -> el daemon crashea y
+;; systemd lo reinicia en bucle (coredumps en coredumpctl). Doom + Nerd Fonts ya
+;; cubren los glyphs, asi que anulamos unicode-fonts-setup (advice :override ->
+;; no-op; aplica aunque el paquete cargue lazy).
+(advice-add 'unicode-fonts-setup :override #'ignore)
 #+end_src
 
 * CONFIGURACIÓN BÁSICA
