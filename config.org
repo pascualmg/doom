@@ -620,30 +620,36 @@ Orden: agenix -> pass -> nil + warn."
   (add-to-list 'warning-suppress-types '(copilot))
   (add-to-list 'warning-suppress-log-types '(copilot)))
 
-;; --- Persistencia de sesion (workspaces autoload) ---
-;; Doom autoguarda la sesion (persp-mode) al matar Emacs, pero NO la carga
-;; al arrancar. Este hook lo hace en GUI -- en daemon puro espera al primer
-;; frame. Solo si existe sesion guardada previamente.
-;; Guardado manual: `SPC q s` o M-x +workspace/save-session.
-;; Carga manual:    `SPC q l` o M-x +workspace/load-session.
-;;
-;; Defensivo: persp-mode es lazy en Doom y persp-auto-save-fname/save-dir
-;; no estan bound hasta primer uso. require + boundp + condition-case para
-;; que un fallo NO reviente doom-after-init-hook (y rompa keybindings).
-(defun +my/auto-load-session-h ()
-  "Cargar ultima sesion de workspaces si existe."
-  (when (display-graphic-p)
+;; --- Persistencia de sesion (workspaces) ---
+;; Restaura TODOS los workspaces (con sus ficheros abiertos), incl. el del
+;; superproyecto, al reiniciar. Antes estaba ROTO por dos motivos:
+;;  1. el hook miraba (display-graphic-p) en doom-after-init-hook, que en un
+;;     DAEMON es nil al arrancar (aun no hay frame) -> nunca cargaba.
+;;  2. llamaba a `+workspace/load-session', que NO existe. El real es
+;;     persp-load-state-from-file (nativo persp-mode, sin prompt).
+;; Fix: autosave periodico (no solo al cerrar) + autoload al PRIMER frame.
+;; Manual: `SPC q s` guardar / `SPC q l` cargar (comandos de Doom).
+(after! persp-mode
+  (setq persp-auto-save-opt 2          ; guardar al salir Y por idle-timer
+        persp-auto-save-interval 180)) ; ... cada 3 min (no perder mas que eso)
+
+(defvar +my/session-loaded nil "Cargar la sesion una sola vez por daemon.")
+(defun +my/auto-load-session-h (&optional _frame)
+  "Restaurar los workspaces guardados, UNA vez, al primer frame grafico."
+  (when (and (not +my/session-loaded) (display-graphic-p))
     (condition-case err
         (when (and (require 'persp-mode nil t)
-                   (boundp 'persp-auto-save-fname)
-                   (boundp 'persp-save-dir)
-                   (fboundp '+workspace/load-session)
+                   (boundp 'persp-auto-save-fname) (boundp 'persp-save-dir)
+                   (fboundp 'persp-load-state-from-file)
                    (file-exists-p
                     (expand-file-name persp-auto-save-fname persp-save-dir)))
-          (+workspace/load-session))
-      (error (message "[autoload-session] no se pudo cargar sesion: %s"
-                      (error-message-string err))))))
+          (persp-load-state-from-file)
+          (setq +my/session-loaded t)
+          (message "[session] workspaces restaurados"))
+      (error (message "[autoload-session] %s" (error-message-string err))))))
 
+;; daemon: al crear el primer frame (Mod+e). GUI directa: al init.
+(add-hook 'server-after-make-frame-hook #'+my/auto-load-session-h)
 (add-hook 'doom-after-init-hook #'+my/auto-load-session-h)
 
 ;; --- GPTel (Ollama) ---
