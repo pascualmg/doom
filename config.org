@@ -463,6 +463,9 @@ Orden: agenix -> pass -> nil + warn."
 
       (when (and clip-output (> (length clip-output) 0))
         (insert (format "[[file:%s]]" image-path))
+        ;; Mostrar la imagen inline al instante (no solo el link).
+        (when (derived-mode-p 'org-mode)
+          (org-display-inline-images))
         (message "Image inserted: %s" image-path)))))
 #+end_src
 
