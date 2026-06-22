@@ -390,9 +390,9 @@ Orden: agenix -> pass -> nil + warn."
       (org-gcal-reload-client-id-secret)))
 
   ;; Mapeo calendario Google -> fichero org local.
-  ;; - personal: la cuenta Gmail principal de Pascual.
-  ;; - family:   calendario compartido con Cristina (creado por Ambrosio efimero).
-  ;; - curro:    deshabilitado por defecto (Vocento es cuenta separada).
+  ;; - personal: la cuenta Gmail principal.
+  ;; - family:   calendario familiar compartido.
+  ;; - curro:    deshabilitado por defecto (cuenta separada).
   ;;             Para activar: descomentar y verificar el ID.
   (setq org-gcal-fetch-file-alist
         '(("pascual.munoz.galian@gmail.com" . "~/org/calendar/personal.org")
