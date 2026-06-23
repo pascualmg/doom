@@ -1310,6 +1310,12 @@ Requiere texlive con =collection-latexextra= (wrapfig + extras de org) y
   ;; los strings de esta lista tal cual, tras los paquetes por defecto).
   (add-to-list 'org-latex-packages-alist
                "\\usepackage{fontspec}\n\\setmonofont{DejaVu Sans Mono}" t))
+
+;; Runbooks: al EXPORTAR (cualquier backend) NO ejecutar los bloques de codigo.
+;; Se muestran tal cual (con sus #+RESULTS ya capturados, si los hay) sin correr
+;; nada. Resuelve el "al exportar me ejecuta los comandos". Para correr un bloque
+;; a mano sigue valiendo C-c C-c; esto solo bloquea la ejecucion EN el export.
+(setq org-export-use-babel nil)
 #+end_src
 
 * RENDIMIENTO (fluidez del LSP)
