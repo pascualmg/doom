@@ -1287,6 +1287,31 @@ conferencia.
               (read-only-mode -1))))
 #+end_src
 
+* EXPORT A PDF (runbooks con box-drawing / Unicode)
+Al exportar un =.org= a PDF (=C-c C-e l p=), org genera un =.tex= y lo compila.
+El compilador por defecto (=pdflatex=) *muere* si el documento tiene caracteres
+Unicode raros — tipico de runbooks con diagramas ASCII (=┌─┐│└┘=) o emoji:
+=! LaTeX Error: Unicode character ┌ (U+250C) not set up for use with LaTeX=.
+
+Fix: usar *lualatex* (UTF-8 nativo, no peta con esos chars) + una fuente
+monoespaciada que *tenga* esos glyphs (=DejaVu Sans Mono= los trae) para que el
+box-drawing de los bloques de codigo se vea en vez de salir tofu. El =%latex= del
+proceso de compilacion respeta =org-latex-compiler=, asi que basta cambiarlo.
+
+Requiere texlive con =collection-latexextra= (wrapfig + extras de org) y
+=lualatex= en el sistema — ya en el flake (=modules/gen/workstation.nix=).
+
+#+begin_src emacs-lisp
+(after! ox-latex
+  ;; lualatex en vez de pdflatex: UTF-8 nativo. Org omite inputenc/fontenc
+  ;; (que son solo de pdflatex) automaticamente al ver este compilador.
+  (setq org-latex-compiler "lualatex")
+  ;; fontspec + mono con box-drawing. Se inserta crudo en el preamble (org mete
+  ;; los strings de esta lista tal cual, tras los paquetes por defecto).
+  (add-to-list 'org-latex-packages-alist
+               "\\usepackage{fontspec}\n\\setmonofont{DejaVu Sans Mono}" t))
+#+end_src
+
 * RENDIMIENTO (fluidez del LSP)
 Lo que mas se nota en el dia a dia con PHP/Intelephense.
 =read-process-output-max= es la optimizacion estrella: el valor por defecto
