@@ -1318,6 +1318,31 @@ Requiere texlive con =collection-latexextra= (wrapfig + extras de org) y
 (setq org-export-use-babel nil)
 #+end_src
 
+* JOURNAL EN SU PROPIO WORKSPACE
+Workspace =vocento= ne =proyecto=: un workspace puede acabar con files de varios
+proyectos (p.ej. el diario de =~/org= colandose mientras curras). Para que el
+diario no ensucie el workspace de trabajo, abrirlo *salta —o crea— un workspace
+llamado =journal=*. Cada cosa en su escritorio. Para volver al de antes: =SPC TAB
+[= (anterior) o =SPC TAB <numero>=.
+
+Solo engancha en los comandos que ABREN el diario, no en la navegacion interna.
+
+#+begin_src emacs-lisp
+(after! org-journal
+  (defun my/journal-to-own-workspace (&rest _)
+    "Salta (o crea) el workspace 'journal' antes de abrir el diario.
+Defensivo: si workspaces no esta, no hace nada (no rompe el comando)."
+    (when (and (fboundp '+workspace-switch) (fboundp '+workspace-current-name))
+      (condition-case err
+          (unless (string= (+workspace-current-name) "journal")
+            (+workspace-switch "journal" t))
+        (error (message "[journal-workspace] ignorado: %s"
+                        (error-message-string err))))))
+  (dolist (fn '(org-journal-new-entry
+                org-journal-open-current-journal-file))
+    (advice-add fn :before #'my/journal-to-own-workspace)))
+#+end_src
+
 * RENDIMIENTO (fluidez del LSP)
 Lo que mas se nota en el dia a dia con PHP/Intelephense.
 =read-process-output-max= es la optimizacion estrella: el valor por defecto
