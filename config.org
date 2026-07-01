@@ -1371,6 +1371,45 @@ Toggle (=SPC t i/I= estaban pillados por indent-bars y el instalador de fuentes)
 (map! :leader :desc "Inlay hints (global)" "t h" #'my/inlay-hints-toggle)
 #+end_src
 
+* PHPUNIT (correr tests desde Emacs, proyectos Vocento con nix+direnv)
+Dos cosas rompian =phpunit.el= en los proyectos Vocento (PHP viejo + nix develop):
+
+1. *phpunit equivocado*: al no haber =vendor/bin/phpunit= (Vocento usa =bin-dir:
+   bin=, el runner es el proxy =bin/phpunit=), phpunit.el caia al =phpunit= del
+   PATH global (el del flake, v10.1.3) que exige PHP 8.1+ e incompatible con un
+   proyecto PHP 7.4. -> apuntar phpunit.el al =bin/phpunit= del PROYECTO.
+
+2. *entorno perdido*: el =compile= de phpunit.el no hereda el entorno de direnv
+   (php del flake) -> "php not found". Y con =fish= (shell por defecto), fish
+   *reconstruye su PATH* e ignora el heredado -> tambien falla. Fix: =inheritenv=
+   (propaga el entorno buffer-local del direnv) + =bash= (respeta el PATH).
+
+#+begin_src emacs-lisp
+(after! phpunit
+  ;; --- 1) usar el phpunit DEL PROYECTO ---------------------------------------
+  (defun my/php-project-phpunit ()
+    "Ruta absoluta al phpunit del proyecto del buffer actual, o nil."
+    (when-let ((root (or (locate-dominating-file default-directory "phpunit.xml.dist")
+                         (locate-dominating-file default-directory "phpunit.xml")
+                         (locate-dominating-file default-directory "composer.json"))))
+      (seq-find #'file-exists-p
+                (mapcar (lambda (rel) (expand-file-name rel root))
+                        '("vendor/bin/phpunit" "bin/phpunit" "vendor/bin/simple-phpunit")))))
+  (defun my/set-project-phpunit ()
+    (when-let ((p (my/php-project-phpunit)))
+      (setq-local phpunit-executable p)))
+  (add-hook 'php-mode-hook #'my/set-project-phpunit)
+  (add-hook 'php-ts-mode-hook #'my/set-project-phpunit)
+
+  ;; --- 2) heredar el entorno de direnv + correr con bash ---------------------
+  (defun my/phpunit-run-in-env (orig &rest args)
+    "Corre phpunit heredando el entorno de direnv (php del flake) via inheritenv,
+y con bash como shell (fish reconstruye el PATH y pierde el php heredado)."
+    (let ((shell-file-name (or (executable-find "bash") shell-file-name)))
+      (inheritenv (apply orig args))))
+  (advice-add 'phpunit-run :around #'my/phpunit-run-in-env))
+#+end_src
+
 * RENDIMIENTO (fluidez del LSP)
 Lo que mas se nota en el dia a dia con PHP/Intelephense.
 =read-process-output-max= es la optimizacion estrella: el valor por defecto
