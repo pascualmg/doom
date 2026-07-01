@@ -1343,6 +1343,49 @@ Defensivo: si workspaces no esta, no hace nada (no rompe el comando)."
     (advice-add fn :before #'my/journal-to-own-workspace)))
 #+end_src
 
+* INLAY HINTS (nombres de parametro estilo IntelliJ)
+LSP pinta el nombre de cada parametro delante del argumento en las llamadas
+(=textDocument/inlayHint=), como IntelliJ: =new UserLimit(value: $limit)=.
+intelephense los provee para PHP. Se activan en TODO buffer con LSP.
+
+Toggles: =SPC t i/I= estaban pillados (indent-bars y el instalador de fuentes),
+asi que van en =h/H=:
+- =SPC t h= : on/off en ESTE buffer.
+- =SPC t H= : on/off GLOBAL (todos los buffers con LSP).
+
+Nota: intelephense aqui solo envia hints de *parametro* (los de *tipo* no los
+manda), por eso el segundo eje es global en vez de "solo-params / +tipos".
+
+#+begin_src emacs-lisp
+(after! lsp-mode
+  (setq lsp-inlay-hint-enable t)
+  ;; activar el modo en cada buffer que arranque LSP (respetando el flag global)
+  (add-hook 'lsp-mode-hook
+            (lambda () (when lsp-inlay-hint-enable (lsp-inlay-hints-mode 1)))))
+
+(defun my/inlay-hints-toggle ()
+  "On/off de los inlay hints en el buffer actual."
+  (interactive)
+  (if (bound-and-true-p lsp-inlay-hints-mode)
+      (progn (lsp-inlay-hints-mode -1) (message "Inlay hints: OFF (buffer)"))
+    (lsp-inlay-hints-mode 1)
+    (message "Inlay hints: ON (buffer)")))
+
+(defun my/inlay-hints-toggle-global ()
+  "On/off de los inlay hints en TODOS los buffers con LSP."
+  (interactive)
+  (setq lsp-inlay-hint-enable (not lsp-inlay-hint-enable))
+  (dolist (b (buffer-list))
+    (with-current-buffer b
+      (when (bound-and-true-p lsp-mode)
+        (lsp-inlay-hints-mode (if lsp-inlay-hint-enable 1 -1)))))
+  (message "Inlay hints GLOBAL: %s" (if lsp-inlay-hint-enable "ON" "OFF")))
+
+(map! :leader
+      :desc "Inlay hints (buffer)" "t h" #'my/inlay-hints-toggle
+      :desc "Inlay hints (global)" "t H" #'my/inlay-hints-toggle-global)
+#+end_src
+
 * RENDIMIENTO (fluidez del LSP)
 Lo que mas se nota en el dia a dia con PHP/Intelephense.
 =read-process-output-max= es la optimizacion estrella: el valor por defecto
