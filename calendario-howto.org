@@ -1,0 +1,99 @@
+#+TITLE: Calendario en Doom (calfw + org-gcal) - howto
+#+STARTUP: showall
+
+Notas de uso del calendario en Doom. Dos capas:
+- *calfw*: vista de calendario (cuadricula mes/semana) de tu agenda org. Funciona
+  YA, sin internet ni cuentas.
+- *org-gcal*: sincroniza Google Calendar <-> ficheros .org locales. Requiere
+  configurar credenciales OAuth (una vez).
+
+* Parte A - calfw (funciona ya)
+
+calfw dibuja tus eventos/TODOs de org (los de =org-agenda-files=) en una
+cuadricula de calendario.
+
+** Abrir
+- =SPC l g v=  -> abre la vista de calendario (=calfw-org-open-calendar=).
+  (Solo en frame GRAFICO; en terminal peta por los colores.)
+
+** Moverte dentro del calendario
+| Tecla       | Accion                          |
+|-------------+---------------------------------|
+| =n= / =p=   | siguiente / anterior periodo    |
+| =f= / =b=   | adelante / atras (dia)          |
+| =<= / =>=   | mes anterior / siguiente        |
+| =t=         | ir a HOY                        |
+| =M= =W= =D= | vista Mes / Semana / Dia        |
+| =RET=       | ver detalle del dia/evento      |
+| =TAB=       | saltar al siguiente evento      |
+| =r=         | refrescar                       |
+| =q=         | cerrar el calendario            |
+
+De momento saldra "vacio" salvo lo que tengas en =org-agenda-files= (tus TODOs,
+el journal, y -cuando actives org-gcal- los eventos de Google).
+
+* Parte B - activar Google Calendar (org-gcal)
+
+El codigo ya esta puesto (seccion "GOOGLE CALENDAR" en config.org). Solo falta
+darle credenciales OAuth de Google. Pasos (una vez):
+
+** 1. Crear credenciales OAuth en Google
+1. Ve a https://console.cloud.google.com/ -> crea un proyecto (o usa uno).
+2. "APIs y servicios" -> "Biblioteca" -> activa *Google Calendar API*.
+3. "APIs y servicios" -> "Credenciales" -> "Crear credenciales" ->
+   "ID de cliente de OAuth" -> tipo *App de escritorio*.
+4. Copia el *Client ID* y el *Client Secret*.
+   (En "Pantalla de consentimiento": tipo Externo, y anadete como usuario de
+   prueba con tu Gmail, o el OAuth no te dejara.)
+
+** 2. Guardar las credenciales (agenix, el patron del enjambre)
+El config las lee con =my/get-google-oauth-creds= en este orden: agenix -> pass.
+Formato agenix: fichero de 2 lineas (client-id en la 1, secret en la 2).
+
+#+begin_src bash
+cd ~/dotfiles/secrets
+printf '%s\n%s\n' 'TU_CLIENT_ID' 'TU_CLIENT_SECRET' | agenix -e google-oauth-emacs.age
+#+end_src
+
+Y anadir la entrada en =~/dotfiles/secrets/secrets.nix= (misma clave/recipients
+que los demas secretos) para que agenix sepa cifrarlo. Commit.
+
+Alternativa pass (si prefieres):
+=pass insert web/google-oauth-emacs-client-id= y =...-client-secret=.
+
+** 3. Recargar y autorizar
+1. =M-x doom/reload= (o reinicia el daemon) para que cargue las creds.
+2. =SPC l g f=  (fetch) -> abrira el NAVEGADOR para el consentimiento OAuth.
+   Autoriza con tu cuenta -> los tokens quedan cacheados. Solo la primera vez.
+3. A partir de ahi, los eventos bajan a =~/org/calendar/personal.org= y
+   =family.org=, y salen en la agenda y en calfw.
+
+** Atajos org-gcal (prefijo =SPC l g=)
+| Tecla | Accion                                    |
+|-------+-------------------------------------------|
+| =f=   | fetch (bajar eventos de Google)           |
+| =s=   | sync (subir cambios locales + bajar)      |
+| =p=   | subir el evento donde esta el cursor      |
+| =d=   | borrar el evento donde esta el cursor     |
+| =v=   | abrir la vista calfw                       |
+| =P=   | abrir personal.org                        |
+| =F=   | abrir family.org                          |
+
+** Crear un evento y subirlo
+1. Abre =personal.org= (=SPC l g P=).
+2. Escribe un heading con una marca de tiempo org:
+   #+begin_example
+   * Dentista
+   <2026-07-10 vie 17:00-18:00>
+   #+end_example
+3. Con el cursor en el heading: =SPC l g p= -> lo sube a Google.
+
+* Notas
+- El calendario "curro" (cuenta separada) esta comentado en la config; para
+  activarlo hay que descomentar su linea en =org-gcal-fetch-file-alist= y poner
+  el ID del calendario.
+- Si algo del OAuth falla ("provider vacio"), la config ya llama a
+  =org-gcal-reload-client-id-secret= tras setear las creds (era un gotcha).
+- Candelario (el primo de agenda) usa la API de Google Calendar por otra via
+  (MCP), independiente de esto. org-gcal es para gestionar el calendario DESDE
+  Emacs en texto plano.

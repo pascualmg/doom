@@ -115,28 +115,10 @@ Para anadir mas para el selector interactivo: `change-font'.")
   "Find first available font from FONT-LIST."
   (cl-find-if #'font-available-p font-list))
 
-(defun download-and-install-nerd-font (font-name)
-  "Download and install FONT-NAME from Nerd Fonts releases."
-  (let* ((github-font-name (replace-regexp-in-string " Nerd Font$" "" font-name))
-         (font-url (format "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/%s.zip"
-                           github-font-name))
-         (temp-file (make-temp-file "nerd-font-" nil ".zip"))
-         (font-dir (expand-file-name "~/.local/share/fonts/")))
-    (message "Downloading %s..." font-name)
-    (url-copy-file font-url temp-file t)
-    (make-directory font-dir t)
-    (call-process "unzip" nil nil nil "-o" temp-file "-d" font-dir)
-    (delete-file temp-file)
-    (when (eq system-type 'gnu/linux)
-      (call-process "fc-cache" nil nil nil "-f" "-v"))
-    (message "Successfully installed %s" font-name)))
-
-(defun select-and-install-nerd-font ()
-  "Interactively select and install a Nerd Font."
-  (interactive)
-  (let ((chosen-font (completing-read "Choose a Nerd Font to install: " my-nerd-fonts)))
-    (when (yes-or-no-p (format "Download and install %s?" chosen-font))
-      (download-and-install-nerd-font chosen-font))))
+;; NOTA: quitadas `download-and-install-nerd-font' y `select-and-install-nerd-font'
+;; (imperativas/antinix: bajaban fuentes por curl). En NixOS las fuentes vienen
+;; del flake. Para elegir entre TODAS las instaladas usa `change-font' (SPC t a),
+;; que lista `font-family-list'.
 
 (defun setup-fonts ()
   "Setup main font configuration."
@@ -210,23 +192,25 @@ salen sin color (el 'blanco feo'). Esto lo asegura al crear el frame."
     :weight bold :extend t))
 
 (defun change-font ()
-  "Interactively change the current font."
+  "Elegir INTERACTIVAMENTE cualquier fuente INSTALADA y aplicarla al editor
+(default + fixed-pitch). La lista sale de `font-family-list' -> TODAS las del
+sistema (en NixOS, las del flake). Con vertico buscas por nombre. Mantiene el
+tamano actual. Persiste hasta reiniciar el daemon (para fijarla, ponla en
+`my-nerd-fonts')."
   (interactive)
-  (when (display-graphic-p)
-    (let* ((chosen-font (completing-read "Choose a font: " my-nerd-fonts))
-           (base-font-size 14))
-      (if (font-available-p chosen-font)
-          (progn
-            (setq doom-font (font-spec :family chosen-font :size base-font-size)
-                  doom-big-font (font-spec :family chosen-font :size (* base-font-size 1.5))
-                  doom-variable-pitch-font (font-spec :family "DejaVu Sans" :size base-font-size))
-            (set-face-attribute 'default nil :font doom-font)
-            (set-face-attribute 'fixed-pitch nil :font doom-font)
-            (set-face-attribute 'variable-pitch nil :font doom-variable-pitch-font)
-            (message "Font changed to %s" chosen-font))
-        (when (yes-or-no-p (format "%s not installed. Download it?" chosen-font))
-          (download-and-install-nerd-font chosen-font)
-          (change-font))))))
+  (if (not (display-graphic-p))
+      (message "change-font: solo funciona en frames graficos")
+    (let* ((familias (sort (delete-dups (font-family-list)) #'string<))
+           (actual (or (ignore-errors (font-get doom-font :family)) ""))
+           (size (or (ignore-errors (font-get doom-font :size)) 18))
+           (chosen (completing-read (format "Fuente (actual: %s): " actual)
+                                    familias nil t)))
+      (setq doom-font (font-spec :family chosen :size size)
+            doom-big-font (font-spec :family chosen :size (round (* size 1.5)))
+            doom-bold-font (font-spec :family chosen :weight 'bold :size size))
+      (set-face-attribute 'default nil :font doom-font)
+      (set-face-attribute 'fixed-pitch nil :font doom-font)
+      (message "Fuente: %s (%spt)" chosen size))))
 
 (defun reload-fonts ()
   "Reload font configuration."
@@ -410,12 +394,14 @@ Orden: agenix -> pass -> nil + warn."
     (add-to-list 'org-agenda-files (expand-file-name file))))
 
 ;; Vista calendario tipo cuadricula (calfw).
+;; OJO: `cfw:open-org-calendar' lo define calfw-ORG, no calfw. El :commands va
+;; en calfw-org o el autoload falla ("failed to define function"). calfw-org
+;; requiere calfw al cargar.
 (use-package! calfw
-  :defer t
-  :commands (cfw:open-org-calendar))
+  :defer t)
 (use-package! calfw-org
   :defer t
-  :after calfw)
+  :commands (calfw-org-open-calendar))
 
 ;; Atajos: SPC l g <letra> para Google Calendar.
 (map! :leader
@@ -424,7 +410,7 @@ Orden: agenix -> pass -> nil + warn."
        :desc "Sync (push + pull)"      "s" #'org-gcal-sync
        :desc "Post-at-point (push)"    "p" #'org-gcal-post-at-point
        :desc "Delete-at-point"         "d" #'org-gcal-delete-at-point
-       :desc "Vista calfw (org)"       "v" #'cfw:open-org-calendar
+       :desc "Vista calfw (org)"       "v" #'calfw-org-open-calendar
        :desc "Abrir personal.org"      "P" (lambda () (interactive) (find-file "~/org/calendar/personal.org"))
        :desc "Abrir family.org"        "F" (lambda () (interactive) (find-file "~/org/calendar/family.org"))))
 
@@ -686,9 +672,8 @@ Orden: agenix -> pass -> nil + warn."
 (map! :leader
       ;; Toggle
       (:prefix ("t" . "toggle")
-       :desc "Change font" "a" #'change-font
+       :desc "Cambiar fuente (instaladas)" "a" #'change-font
        :desc "Reload fonts" "A" #'reload-fonts
-       :desc "Install Nerd Font" "I" #'select-and-install-nerd-font
        :desc "Toggle transparency" "t" #'toggle-transparency)
 
       ;; Journal

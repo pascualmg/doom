@@ -187,6 +187,43 @@ Funcion `download-and-install-nerd-font` descarga e instala fonts via curl
 Detecta PGTK vs X11. `set-frame-transparency 85` por defecto.
 `toggle-transparency` (SPC t t) alterna 85<->100.
 
+## Novedades 2026-07-02 (sesion nocturna autonoma)
+
+**Config LITERATE**: la fuente es `config.org` (tangle -> `config.el`, gitignored).
+Editar config.org, tangle (`org-babel-tangle-file`), y `(load config.el)` para
+recargar en el daemon. Las referencias "config.el:NNN" de la auditoria de mayo
+son de la epoca no-literate; ahora el codigo vive en config.org.
+
+Nuevas secciones/features en config.org:
+- **EXPORT A PDF**: org->PDF con `lualatex` + fontspec/DejaVu Sans Mono (runbooks
+  con box-drawing no petan) + `org-export-use-babel nil` (no ejecuta bloques al
+  exportar). `C-c C-e l p`. Requiere texlive scheme-medium + collection-latexextra
+  (en el flake, workstation.nix).
+- **JOURNAL EN SU WORKSPACE**: abrir org-journal salta al workspace "journal"
+  (advice en `org-journal-new-entry` / `-open-current-journal-file`). `SPC j j`.
+- **INLAY HINTS** (nombres de parametro estilo IntelliJ, intelephense): on por
+  defecto en buffers LSP; toggle global `SPC t h` (`my/inlay-hints-toggle`).
+  intelephense SOLO da hints de parametro, no de tipo (probado en 1.18.2).
+- **PHPUNIT** desde Emacs en proyectos Vocento (nix+direnv): `my/php-project-phpunit`
+  resuelve el `bin/phpunit` del proyecto (Vocento usa bin-dir "bin" -> proxy
+  composer, NO vendor/bin/phpunit) + advice `my/phpunit-run-in-env` en `phpunit-run`
+  con `inheritenv` + bash (fish reconstruye el PATH y pierde el php de direnv).
+  `SPC m t s/a/r`. Verificado: CampaignTest 8/8, PHPUnit 9.6.
+- **FUENTES**: `change-font` (`SPC t a`) elige entre TODAS las instaladas
+  (`font-family-list`, ~1191 del flake). Quitadas `download-and-install-nerd-font`
+  y `select-and-install-nerd-font` (antinix). `setup-fonts` sigue usando
+  `my-nerd-fonts` para el default de arranque.
+- **CALENDARIO**: bug arreglado -- el upgrade renombro `cfw:open-org-calendar` ->
+  `calfw-org-open-calendar` (prefijo cfw: -> calfw-). `SPC l g v`. OJO: calfw solo
+  va en frame GRAFICO (TTY peta por color-name-to-rgb). org-gcal configurado pero
+  falta que Pascual meta creds Google OAuth. Guia: `calendario-howto.org`.
+
+Modulos: quitados `:lang cc` y `python` de init.el (no se usan). `doom-dashboard`
+-> `dashboard` (rename Doom 2.1). Daemon NUMA-pineado (en dotfiles emacs.nix, no
+en doom): `numactl --cpunodebind=0 --membind=0` en aurin (doble socket).
+
+`doom upgrade` pasado 2026-07-02 (68 paquetes). Requiere restart del daemon.
+
 ## Auditoria de problemas (2026-05-19)
 
 Estado tras eliminar la licencia hardcodeada. Pendientes ordenados por
@@ -519,7 +556,10 @@ problema de `(map! ...)` cuando es de otro hook.
 ---
 
 Ultima auditoria: 2026-05-19
-Ultima actualizacion: 2026-05-19 (Fases 1, 1.5, 2 cerradas; Fase 3 revertida)
+Ultima actualizacion: 2026-07-02 (sesion nocturna: export PDF, journal-workspace,
+inlay hints, phpunit Vocento, fuentes-instaladas, calfw fix, cc/python fuera,
+doom upgrade. Ver "Novedades 2026-07-02" arriba. Config ahora LITERATE via
+config.org.)
 Estado: licencia Intelephense sacada, Fases 1+1.5+2 cerradas y verificadas
 en vivo. Doom upgrade pasado. Fase 3 (claude-code-ide) probada y revertida
 por decision de Pascual (conflicto con modelo Ambrosio global). Autoload
