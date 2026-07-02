@@ -262,7 +262,12 @@ tamano actual. Persiste hasta reiniciar el daemon (para fijarla, ponla en
 ;; Configuración adicional de Org
 (after! org
   (setq org-startup-with-inline-images t
-        org-export-allow-bind-keywords t)
+        org-export-allow-bind-keywords t
+        ;; NO descargar imagenes REMOTAS al mostrar inline. Doom lo pone en
+        ;; 'download por defecto; tus notas con imagenes de turium.es hacian que
+        ;; el arranque bajara cada una (bloqueante) -> lento la 1a vez. 'skip =
+        ;; arranque siempre rapido; las remotas salen como link (RET para abrir).
+        org-display-remote-inline-images 'skip)
 
   ;; Org-crypt para encriptación
   (require 'org-crypt)
