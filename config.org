@@ -529,12 +529,35 @@ agenix (privado), no en el repo publico."
       (with-temp-file (expand-file-name "~/org/calendar/agenda.org") (insert out))
       (message "Agenda family: %d filas (recurrentes colapsados) -> agenda.org" (length rows)))))
 
+;; --- Refresco automatico (throttled), sin machacar el daemon ---
+(defvar my/gcal-refresh-interval (* 30 60)
+  "Segundos minimos entre fetches automaticos de la agenda.")
+
+(defun my/gcal-fetch-maybe ()
+  "Ejecuta `my/gcal-fetch' SOLO si agenda.org tiene mas de
+`my/gcal-refresh-interval' segundos. Silencioso ante errores (red, token)."
+  (let* ((f (expand-file-name "~/org/calendar/agenda.org"))
+         (age (if (file-exists-p f)
+                  (float-time (time-subtract
+                               (current-time)
+                               (file-attribute-modification-time (file-attributes f))))
+                most-positive-fixnum)))
+    (when (> age my/gcal-refresh-interval)
+      (ignore-errors (my/gcal-fetch)))))
+
+;; a) al abrir la vista calfw, refresca antes (queda fresca cuando la miras).
+(advice-add 'calfw-org-open-calendar :before (lambda (&rest _) (my/gcal-fetch-maybe)))
+;; b) una vez al arrancar Doom, cuando lleve 20s idle (no bloquea el arranque).
+(run-with-idle-timer 20 nil #'my/gcal-fetch-maybe)
+
 ;; Atajos: SPC l g <letra> para el calendario.
 (map! :leader
       (:prefix ("l g" . "google calendar")
        :desc "Fetch eventos (read-only)" "f" #'my/gcal-fetch
        :desc "Vista calfw (org)"         "v" #'calfw-org-open-calendar
-       :desc "Abrir agenda.org"          "a" (lambda () (interactive) (find-file "~/org/calendar/agenda.org"))
+       :desc "Abrir agenda.org"          "a" (lambda () (interactive)
+                                               (my/gcal-fetch-maybe)
+                                               (find-file "~/org/calendar/agenda.org"))
        ;; org-gcal 2-way (pendiente del bug async gpg):
        :desc "[wip] Sync (push+pull)"    "s" #'org-gcal-sync
        :desc "[wip] Post-at-point"       "p" #'org-gcal-post-at-point
