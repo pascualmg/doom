@@ -534,11 +534,17 @@ agenix (privado), no en el repo publico."
       (with-temp-file (expand-file-name "~/org/calendar/agenda.org") (insert out))
       (message "Agenda family: %d filas (recurrentes colapsados) -> agenda.org" (length rows)))))
 
-;; agenda.org entra en org-agenda SIEMPRE, independiente de que org-gcal (:defer)
-;; se haya cargado. Si no, la vista calfw (que lee org-agenda-files) no ve nada
-;; tras un reboot aunque el .org tenga eventos. Este era el bug de "no se ve en la
-;; vista guay pero si en el .org".
-(add-to-list 'org-agenda-files (expand-file-name "~/org/calendar/agenda.org"))
+;; Agenda LIMPIA y explicita: solo lo que Pascual quiere organizar.
+;;   - agenda.org : su calendario family (Google, read-only)
+;;   - journal/   : donde ORGANIZA (TODOs con SCHEDULED/DEADLINE en el diario)
+;; Antes org-agenda-files era ~/org/ ENTERO (default de Doom) y arrastraba ruido
+;; viejo: adel.org (calendario escolar 2024-25), autocandidatura, docencia...
+;; Esto lo reemplaza por una lista curada. Para sumar otro fichero: anadir su ruta.
+;; Ademas arregla el bug "no se ve en calfw pero si en el .org" (calfw lee
+;; org-agenda-files; agenda.org ya esta aqui, independiente de org-gcal :defer).
+(setq org-agenda-files
+      (list (expand-file-name "~/org/calendar/agenda.org")
+            (expand-file-name "~/org/journal/")))
 
 ;; --- Refresco automatico (throttled), sin machacar el daemon ---
 (defvar my/gcal-refresh-interval (* 30 60)
