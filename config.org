@@ -486,8 +486,13 @@ agenix (privado), no en el repo publico."
   (interactive)
   (require 'iso8601)
   (require 'oauth2-auto)
-  (setq oauth2-auto-google-client-id     org-gcal-client-id
-        oauth2-auto-google-client-secret org-gcal-client-secret)
+  ;; Creds directas de agenix. NO dependemos de que org-gcal se haya cargado:
+  ;; es :defer, y tras un reboot su :config aun no ha corrido -> org-gcal-client-id
+  ;; seria void. Asi el fetch es autosuficiente y sobrevive al arranque en frio.
+  (let ((creds (or (my/get-google-oauth-creds)
+                   (user-error "Sin credenciales OAuth Google (agenix)"))))
+    (setq oauth2-auto-google-client-id     (car creds)
+          oauth2-auto-google-client-secret (cdr creds)))
   (let* ((cal-id (or (my/gcal-family-id)
                      (user-error "No encuentro el ID de family en agenix")))
          (token (oauth2-auto-access-token-sync "pascual.munoz.galian@gmail.com" 'google))
