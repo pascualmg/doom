@@ -534,6 +534,12 @@ agenix (privado), no en el repo publico."
       (with-temp-file (expand-file-name "~/org/calendar/agenda.org") (insert out))
       (message "Agenda family: %d filas (recurrentes colapsados) -> agenda.org" (length rows)))))
 
+;; agenda.org entra en org-agenda SIEMPRE, independiente de que org-gcal (:defer)
+;; se haya cargado. Si no, la vista calfw (que lee org-agenda-files) no ve nada
+;; tras un reboot aunque el .org tenga eventos. Este era el bug de "no se ve en la
+;; vista guay pero si en el .org".
+(add-to-list 'org-agenda-files (expand-file-name "~/org/calendar/agenda.org"))
+
 ;; --- Refresco automatico (throttled), sin machacar el daemon ---
 (defvar my/gcal-refresh-interval (* 30 60)
   "Segundos minimos entre fetches automaticos de la agenda.")
