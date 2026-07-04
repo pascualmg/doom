@@ -411,16 +411,65 @@ Orden: agenix -> pass -> nil + warn."
   :defer t
   :commands (calfw-org-open-calendar))
 
-;; Atajos: SPC l g <letra> para Google Calendar.
+;; --- Fetch READ-ONLY que SI funciona (bypass del bug async de org-gcal) ---
+;; org-gcal descifra el token OAuth en su contexto ASYNC y peta ("No secret key"
+;; SOLO en async; en sincrono descifra bien). Asi que bajamos los eventos
+;; nosotros: token sincrono (oauth2-auto-access-token-sync, que SI descifra) + la
+;; API de Google Calendar directamente. Read-only, pero funciona de verdad.
+;; (El 2-way -crear/editar- sigue pendiente del bug async de org-gcal.)
+(defun my/gcal--ts (iso)
+  "RFC3339 ISO -> timestamp org activo, o nil."
+  (when (stringp iso)
+    (ignore-errors
+      (if (string-match-p "T" iso)
+          (format-time-string "<%Y-%m-%d %a %H:%M>" (encode-time (iso8601-parse iso)))
+        (format-time-string "<%Y-%m-%d %a>" (encode-time (iso8601-parse-date iso)))))))
+
+(defun my/gcal-fetch ()
+  "Baja los eventos del Google Calendar principal a ~/org/calendar/agenda.org.
+Read-only. Usa el token OAuth (sincrono) + la API; bypass del org-gcal roto."
+  (interactive)
+  (require 'iso8601)
+  (require 'oauth2-auto)
+  (setq oauth2-auto-google-client-id     org-gcal-client-id
+        oauth2-auto-google-client-secret org-gcal-client-secret)
+  (let* ((cal "pascual.munoz.galian@gmail.com")
+         (token (oauth2-auto-access-token-sync cal 'google))
+         (tmin (format-time-string "%Y-%m-%dT%H:%M:%SZ" nil t))
+         (url (concat "https://www.googleapis.com/calendar/v3/calendars/"
+                      (url-hexify-string cal)
+                      "/events?maxResults=100&singleEvents=true&orderBy=startTime&timeMin=" tmin))
+         (url-request-extra-headers (list (cons "Authorization" (concat "Bearer " token))))
+         (buf (url-retrieve-synchronously url t t 30)))
+    (with-current-buffer buf
+      (goto-char (point-min))
+      (re-search-forward "\n\n" nil t)
+      (let* ((json (json-parse-buffer :object-type 'alist :array-type 'list))
+             (items (alist-get 'items json))
+             (out "#+TITLE: Agenda (Google Calendar)\n#+STARTUP: content\n\n"))
+        (dolist (ev items)
+          (let* ((summary (or (alist-get 'summary ev) "(sin titulo)"))
+                 (sdt (let ((s (alist-get 'start ev)))
+                        (or (alist-get 'dateTime s) (alist-get 'date s))))
+                 (loc (alist-get 'location ev))
+                 (ts (my/gcal--ts sdt)))
+            (setq out (concat out (format "* %s\n%s%s" summary
+                                          (if ts (concat "  " ts "\n") "")
+                                          (if loc (format "  Lugar: %s\n" loc) ""))))))
+        (with-temp-file (expand-file-name "~/org/calendar/agenda.org") (insert out))
+        (kill-buffer buf)
+        (message "Agenda: %d eventos -> agenda.org" (length items))))))
+
+;; Atajos: SPC l g <letra> para el calendario.
 (map! :leader
       (:prefix ("l g" . "google calendar")
-       :desc "Fetch (pull events)"     "f" #'org-gcal-fetch
-       :desc "Sync (push + pull)"      "s" #'org-gcal-sync
-       :desc "Post-at-point (push)"    "p" #'org-gcal-post-at-point
-       :desc "Delete-at-point"         "d" #'org-gcal-delete-at-point
-       :desc "Vista calfw (org)"       "v" #'calfw-org-open-calendar
-       :desc "Abrir personal.org"      "P" (lambda () (interactive) (find-file "~/org/calendar/personal.org"))
-       :desc "Abrir family.org"        "F" (lambda () (interactive) (find-file "~/org/calendar/family.org"))))
+       :desc "Fetch eventos (read-only)" "f" #'my/gcal-fetch
+       :desc "Vista calfw (org)"         "v" #'calfw-org-open-calendar
+       :desc "Abrir agenda.org"          "a" (lambda () (interactive) (find-file "~/org/calendar/agenda.org"))
+       ;; org-gcal 2-way (pendiente del bug async gpg):
+       :desc "[wip] Sync (push+pull)"    "s" #'org-gcal-sync
+       :desc "[wip] Post-at-point"       "p" #'org-gcal-post-at-point
+       :desc "[wip] Delete-at-point"     "d" #'org-gcal-delete-at-point))
 
 ;; Función para insertar imágenes desde el portapapeles.
 ;; Detecta Wayland (PGTK) -> wl-paste; resto -> xclip.
