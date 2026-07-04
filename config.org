@@ -418,47 +418,116 @@ Orden: agenix -> pass -> nil + warn."
 ;; API de Google Calendar directamente. Read-only, pero funciona de verdad.
 ;; (El 2-way -crear/editar- sigue pendiente del bug async de org-gcal.)
 (defun my/gcal--ts (iso)
-  "RFC3339 ISO -> timestamp org activo, o nil."
+  "RFC3339 ISO -> timestamp org activo, o nil.
+Con hora si el ISO la trae (dateTime); solo dia si es all-day (date)."
   (when (stringp iso)
     (ignore-errors
       (if (string-match-p "T" iso)
           (format-time-string "<%Y-%m-%d %a %H:%M>" (encode-time (iso8601-parse iso)))
-        (format-time-string "<%Y-%m-%d %a>" (encode-time (iso8601-parse-date iso)))))))
+        ;; all-day: iso8601-parse-date deja hora/min/seg a nil y encode-time peta;
+        ;; los rellenamos a 0.
+        (let ((d (iso8601-parse-date iso)))
+          (setf (decoded-time-second d) 0
+                (decoded-time-minute d) 0
+                (decoded-time-hour d) 0)
+          (format-time-string "<%Y-%m-%d %a>" (encode-time d)))))))
+
+(defun my/gcal--ts-day (iso)
+  "Como `my/gcal--ts' pero SIEMPRE a nivel de dia (ignora la hora).
+Para rangos de recurrentes."
+  (when (and (stringp iso) (>= (length iso) 10))
+    (my/gcal--ts (substring iso 0 10))))
+
+(defun my/gcal--ts-range (start end)
+  "TS org del evento. Si es all-day de varios dias, devuelve rango <ini>--<fin>
+(Google da END exclusivo, se resta 1 dia). Si no, TS simple de START."
+  (let ((sts (my/gcal--ts start)))
+    (if (and (stringp start) (stringp end)
+             (not (string-match-p "T" start))
+             (not (string-match-p "T" end)))
+        (let* ((ed (ignore-errors
+                     (let ((d (iso8601-parse-date end)))
+                       (setf (decoded-time-second d) 0 (decoded-time-minute d) 0
+                             (decoded-time-hour d) 0)
+                       (time-subtract (encode-time d) 86400))))
+               (ets (and ed (format-time-string "<%Y-%m-%d %a>" ed))))
+          (if (and ets (not (equal ets sts))) (concat sts "--" ets) sts))
+      sts)))
+
+(defun my/gcal--events (cal-id token tmin)
+  "Lista de eventos (alist) de CAL-ID desde TMIN, o nil si falla."
+  (let* ((url-request-extra-headers (list (cons "Authorization" (concat "Bearer " token))))
+         (url (concat "https://www.googleapis.com/calendar/v3/calendars/"
+                      (url-hexify-string cal-id)
+                      "/events?maxResults=250&singleEvents=true&orderBy=startTime&timeMin=" tmin))
+         (buf (ignore-errors (url-retrieve-synchronously url t t 30))))
+    (when buf
+      (unwind-protect
+          (with-current-buffer buf
+            (goto-char (point-min)) (re-search-forward "\n\n" nil t)
+            (alist-get 'items (json-parse-buffer :object-type 'alist :array-type 'list)))
+        (kill-buffer buf)))))
+
+(defun my/gcal-family-id ()
+  "ID del calendario family (linea 3 del .age agenix). nil si no esta."
+  (let* ((secrets-dir (expand-file-name "~/dotfiles/secrets/"))
+         (age-file (expand-file-name "google-oauth-emacs.age" secrets-dir)))
+    (when (and (executable-find "agenix") (file-readable-p age-file))
+      (let* ((default-directory secrets-dir)
+             (out (shell-command-to-string "agenix -d google-oauth-emacs.age 2>/dev/null"))
+             (lines (split-string out "\n" t " *")))
+        (nth 2 lines)))))
 
 (defun my/gcal-fetch ()
-  "Baja los eventos del Google Calendar principal a ~/org/calendar/agenda.org.
-Read-only. Usa el token OAuth (sincrono) + la API; bypass del org-gcal roto."
+  "Baja los eventos del calendario FAMILY de Google a ~/org/calendar/agenda.org,
+ordenados por fecha, desde el inicio de hoy. Read-only; bypass del org-gcal roto
+en async (usa el token OAuth sincrono + la API directa). El ID de family vive en
+agenix (privado), no en el repo publico."
   (interactive)
   (require 'iso8601)
   (require 'oauth2-auto)
   (setq oauth2-auto-google-client-id     org-gcal-client-id
         oauth2-auto-google-client-secret org-gcal-client-secret)
-  (let* ((cal "pascual.munoz.galian@gmail.com")
-         (token (oauth2-auto-access-token-sync cal 'google))
-         (tmin (format-time-string "%Y-%m-%dT%H:%M:%SZ" nil t))
-         (url (concat "https://www.googleapis.com/calendar/v3/calendars/"
-                      (url-hexify-string cal)
-                      "/events?maxResults=100&singleEvents=true&orderBy=startTime&timeMin=" tmin))
-         (url-request-extra-headers (list (cons "Authorization" (concat "Bearer " token))))
-         (buf (url-retrieve-synchronously url t t 30)))
-    (with-current-buffer buf
-      (goto-char (point-min))
-      (re-search-forward "\n\n" nil t)
-      (let* ((json (json-parse-buffer :object-type 'alist :array-type 'list))
-             (items (alist-get 'items json))
-             (out "#+TITLE: Agenda (Google Calendar)\n#+STARTUP: content\n\n"))
-        (dolist (ev items)
-          (let* ((summary (or (alist-get 'summary ev) "(sin titulo)"))
-                 (sdt (let ((s (alist-get 'start ev)))
-                        (or (alist-get 'dateTime s) (alist-get 'date s))))
-                 (loc (alist-get 'location ev))
-                 (ts (my/gcal--ts sdt)))
-            (setq out (concat out (format "* %s\n%s%s" summary
-                                          (if ts (concat "  " ts "\n") "")
-                                          (if loc (format "  Lugar: %s\n" loc) ""))))))
-        (with-temp-file (expand-file-name "~/org/calendar/agenda.org") (insert out))
-        (kill-buffer buf)
-        (message "Agenda: %d eventos -> agenda.org" (length items))))))
+  (let* ((cal-id (or (my/gcal-family-id)
+                     (user-error "No encuentro el ID de family en agenix")))
+         (token (oauth2-auto-access-token-sync "pascual.munoz.galian@gmail.com" 'google))
+         (tmin (format-time-string "%Y-%m-%dT00:00:00Z" nil t))
+         (rows '()))
+    (dolist (ev (my/gcal--events cal-id token tmin))
+      (let ((s (alist-get 'start ev)))
+        (push (list (or (alist-get 'dateTime s) (alist-get 'date s))
+                    (or (alist-get 'summary ev) "(sin titulo)")
+                    (alist-get 'location ev)
+                    (let ((e (alist-get 'end ev)))
+                      (or (alist-get 'dateTime e) (alist-get 'date e))))
+              rows)))
+    (require 'cl-lib)
+    (setq rows (sort rows (lambda (a b) (string< (or (car a) "") (or (car b) "")))))
+    ;; Contar por titulo para colapsar recurrentes ruidosos (multa diaria, cole...).
+    (let ((counts (make-hash-table :test 'equal))
+          (seen (make-hash-table :test 'equal))
+          (out "#+TITLE: Agenda (family)\n#+STARTUP: content\n#+FILETAGS: :family:\n\n"))
+      (dolist (r rows) (puthash (nth 1 r) (1+ (gethash (nth 1 r) counts 0)) counts))
+      (dolist (r rows)
+        (let* ((summ (nth 1 r))
+               (n (gethash summ counts)))
+          (if (>= n 4)
+              ;; recurrente: una sola entrada con rango (en su 1a aparicion).
+              (unless (gethash summ seen)
+                (puthash summ t seen)
+                (let* ((ds (cl-loop for x in rows when (equal (nth 1 x) summ)
+                                    collect (nth 0 x)))
+                       (tmin (my/gcal--ts-day (car ds)))
+                       (tmax (my/gcal--ts-day (car (last ds)))))
+                  (setq out (concat out (format "* %s\n  %s--%s  (recurrente, %d dias)\n"
+                                                summ tmin tmax n)))))
+            ;; evento normal.
+            (let ((ts (my/gcal--ts-range (nth 0 r) (nth 3 r))))
+              (setq out (concat out (format "* %s\n%s%s" summ
+                                            (if ts (concat "  " ts "\n") "")
+                                            (if (nth 2 r) (format "  Lugar: %s\n" (nth 2 r)) ""))))))))
+      (with-temp-file (expand-file-name "~/org/calendar/agenda.org") (insert out))
+      (message "Agenda family: %d filas (recurrentes colapsados) -> agenda.org" (length rows)))))
 
 ;; Atajos: SPC l g <letra> para el calendario.
 (map! :leader
