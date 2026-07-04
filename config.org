@@ -534,17 +534,13 @@ agenix (privado), no en el repo publico."
       (with-temp-file (expand-file-name "~/org/calendar/agenda.org") (insert out))
       (message "Agenda family: %d filas (recurrentes colapsados) -> agenda.org" (length rows)))))
 
-;; Agenda LIMPIA y explicita: solo lo que Pascual quiere organizar.
-;;   - agenda.org : su calendario family (Google, read-only)
-;;   - journal/   : donde ORGANIZA (TODOs con SCHEDULED/DEADLINE en el diario)
-;; Antes org-agenda-files era ~/org/ ENTERO (default de Doom) y arrastraba ruido
-;; viejo: adel.org (calendario escolar 2024-25), autocandidatura, docencia...
-;; Esto lo reemplaza por una lista curada. Para sumar otro fichero: anadir su ruta.
-;; Ademas arregla el bug "no se ve en calfw pero si en el .org" (calfw lee
-;; org-agenda-files; agenda.org ya esta aqui, independiente de org-gcal :defer).
-(setq org-agenda-files
-      (list (expand-file-name "~/org/calendar/agenda.org")
-            (expand-file-name "~/org/journal/")))
+;; Cualquier .org de ~/org puede aportar entradas a la agenda (default de Doom,
+;; y a Pascual le gusta asi). Solo garantizamos que agenda.org (family, que esta
+;; en el subdir calendar/) tambien entre, independiente de org-gcal :defer.
+;; Esto ademas arregla el bug "no se ve en calfw pero si en el .org" (calfw lee
+;; org-agenda-files). Los ficheros VIEJOS (adel.org escolar 2024-25...) se sacan
+;; moviendolos a ~/org/archive/ (subdir no escaneado), no capando el mecanismo.
+(add-to-list 'org-agenda-files (expand-file-name "~/org/calendar/agenda.org"))
 
 ;; --- Refresco automatico (throttled), sin machacar el daemon ---
 (defvar my/gcal-refresh-interval (* 30 60)
