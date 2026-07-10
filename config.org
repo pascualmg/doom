@@ -1679,3 +1679,19 @@ Redimensionable y con rutas completas: mejor cuando hay muchas referencias."
  "gr" #'my/gr-references-dwim
  "gR" #'my/gR-references-dwim)
 #+end_src
+
+* BRAIN: AFLORAR EL TERCER CEREBRO POR SIGNIFICADO
+
+El tercer cerebro (org-roam en =~/org/roam=) ya se busca por SIGNIFICADO
+desde fuera con =brain-search.py= (embeddings bge-m3 en Ollama local).
+Esta seccion lo trae DENTRO de Doom: =SPC n b s= pregunta, lanza el
+buscador en asincrono, y ofrece los nodos con completing-read (vertico).
+Elegir uno lo abre. Tambien =SPC n b r= (reindexar) y =SPC n b d=
+(casi-duplicados).
+
+El codigo vive en su propio fichero para no engordar este documento:
+[[file:brain-search.el][brain-search.el]].
+
+#+begin_src emacs-lisp
+(load! "brain-search")
+#+end_src
