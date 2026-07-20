@@ -836,7 +836,8 @@ agenix (privado), no en el repo publico."
       (:prefix ("t" . "toggle")
        :desc "Cambiar fuente (instaladas)" "a" #'change-font
        :desc "Reload fonts" "A" #'reload-fonts
-       :desc "Toggle transparency" "t" #'toggle-transparency)
+       :desc "Toggle transparency" "t" #'toggle-transparency
+       :desc "Fullscreen" "F" #'toggle-frame-fullscreen)
 
       ;; Journal
       (:prefix ("j" . "journal")
@@ -1411,6 +1412,37 @@ Tres ingredientes:
   (when (boundp 'doom-variable-pitch-font)
     (setq doom-variable-pitch-font (font-spec :family family :size 18)))
   (message "Prosa (variable-pitch) ahora: %s" family))
+#+end_src
+
+** Imágenes inline que ESCALAN con el zoom del texto (C-+ / C--)
+Por defecto las imágenes de org NO cambian de tamaño al hacer zoom de texto.
+Esto las reescala proporcionalmente: al ampliar/reducir la letra con =C-+= / =C--=
+(o =SPC z=), las fotos crecen y menguan con ella. Ancho base ~360px al zoom 0.
+OJO: para que mande el zoom, las imágenes NO deben llevar =#+ATTR_ORG :width=
+(un ancho fijo en el fichero gana sobre esto).
+
+#+begin_src emacs-lisp
+(defvar my/org-image-base-width 360
+  "Ancho base (px) de las imagenes inline de org al zoom de texto 0.")
+
+(defun my/org-image-rescale (&rest _)
+  "Reescala las imagenes inline de org segun el text-scale del buffer."
+  (when (derived-mode-p 'org-mode)
+    (let* ((amount (or (and (boundp 'text-scale-mode-amount) text-scale-mode-amount) 0))
+           (factor (expt 1.2 amount))
+           (width  (max 60 (round (* my/org-image-base-width factor)))))
+      (setq-local org-image-actual-width (list width))
+      (when (bound-and-true-p org-inline-image-overlays)
+        (org-redisplay-inline-images)))))
+
+;; ancho base al abrir cualquier org (para que el zoom parta de aqui)
+(add-hook 'org-mode-hook
+          (lambda ()
+            (setq-local org-image-actual-width (list my/org-image-base-width))))
+
+;; reescalar cada vez que cambia el zoom de texto
+(dolist (fn '(text-scale-increase text-scale-decrease text-scale-set text-scale-adjust))
+  (advice-add fn :after #'my/org-image-rescale))
 #+end_src
 
 * PRESENTACIONES CON ORG (slides para el curro)
