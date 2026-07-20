@@ -868,6 +868,46 @@ agenix (privado), no en el repo publico."
 
 ;; Keybinding global para insertar imágenes
 (global-set-key (kbd "S-<print>") 'brutalist-clipboard-png-insert)
+
+;; ── Child frame flotante DENTRO de Emacs (no una ventana X aparte) ──────────
+;; Flota el buffer actual en un frame hijo que vive ENCIMA del layout, dentro de
+;; la misma sesion (XMonad no lo ve como ventana suelta). Ideal para dejar ahi el
+;; output de un test (behat) mirandolo mientras curras. F12 lo pone y lo quita.
+(defvar my/float-frame nil "Child frame flotante actual, o nil.")
+
+(defun my/toggle-float-buffer ()
+  "Flota el buffer actual en un child frame dentro de Emacs (toggle con F12).
+Segunda llamada: lo cierra. Solo en GUI."
+  (interactive)
+  (if (and my/float-frame (frame-live-p my/float-frame))
+      (progn (delete-frame my/float-frame)
+             (setq my/float-frame nil)
+             (message "float: cerrado"))
+    (unless (display-graphic-p)
+      (user-error "Los child frames solo van en frame grafico (GUI)"))
+    (let* ((buf (current-buffer))
+           (parent (selected-frame))
+           (pw (frame-pixel-width parent))
+           (ph (frame-pixel-height parent))
+           (fr (make-frame
+                `((parent-frame . ,parent)
+                  (undecorated . t)
+                  (minibuffer . nil)
+                  (unsplittable . t)
+                  (internal-border-width . 3)
+                  (left . ,(round (* pw 0.38)))
+                  (top . ,(round (* ph 0.08)))
+                  (width . 92) (height . 26)
+                  (left-fringe . 8) (right-fringe . 8)
+                  (vertical-scroll-bars . right)
+                  (no-other-frame . t)))))
+      (select-frame fr)
+      (switch-to-buffer buf)
+      (set-face-background 'internal-border "#7f7fff" fr)
+      (setq my/float-frame fr)
+      (message "float: %s flotando (F12 para cerrar)" (buffer-name buf)))))
+
+(global-set-key (kbd "<f12>") #'my/toggle-float-buffer)
 #+end_src
 
 * CONFIGURACIÓN HASKELL + HLS
