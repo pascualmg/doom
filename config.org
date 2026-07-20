@@ -687,6 +687,10 @@ agenix (privado), no en el repo publico."
         lsp-intelephense-multi-root nil
         lsp-intelephense-environment-php-version "8.3")
 
+  ;; Breadcrumbs (la barra "src > Controller > Fichero" arriba) automaticos en
+  ;; TODO buffer LSP, sin activarlos a mano. Toggle puntual: SPC t b.
+  (setq lsp-headerline-breadcrumb-enable t)
+
   ;; Optimizaciones de rendimiento
   (setq lsp-enable-file-watchers nil
         lsp-enable-folding nil
@@ -837,7 +841,8 @@ agenix (privado), no en el repo publico."
        :desc "Cambiar fuente (instaladas)" "a" #'change-font
        :desc "Reload fonts" "A" #'reload-fonts
        :desc "Toggle transparency" "t" #'toggle-transparency
-       :desc "Fullscreen" "F" #'toggle-frame-fullscreen)
+       :desc "Fullscreen" "F" #'toggle-frame-fullscreen
+       :desc "LSP breadcrumbs" "b" #'lsp-headerline-breadcrumb-mode)
 
       ;; Journal
       (:prefix ("j" . "journal")
