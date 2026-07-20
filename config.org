@@ -894,7 +894,9 @@ Segunda llamada: lo cierra. Solo en GUI."
                   (undecorated . t)
                   (minibuffer . nil)
                   (unsplittable . t)
-                  (internal-border-width . 3)
+                  ;; borde GORDO y agarrable -> arrastrarlo redimensiona.
+                  (internal-border-width . 8)
+                  (drag-internal-border . t)
                   (left . ,(round (* pw 0.38)))
                   (top . ,(round (* ph 0.08)))
                   (width . 92) (height . 26)
@@ -905,9 +907,30 @@ Segunda llamada: lo cierra. Solo en GUI."
       (switch-to-buffer buf)
       (set-face-background 'internal-border "#7f7fff" fr)
       (setq my/float-frame fr)
-      (message "float: %s flotando (F12 para cerrar)" (buffer-name buf)))))
+      (message "float: %s (arrastra BORDE=redimensiona, BARRA ABAJO=mueve; F12 cierra)"
+               (buffer-name buf)))))
+
+;; Mover el flotante por teclado (backup del raton): M-Shift-flechas.
+(defun my/float--edge (fr p) (let ((v (frame-parameter fr p))) (if (consp v) (cadr v) v)))
+(defun my/float-move (dx dy)
+  (when (frame-live-p my/float-frame)
+    (set-frame-parameter my/float-frame 'left (+ (my/float--edge my/float-frame 'left) dx))
+    (set-frame-parameter my/float-frame 'top  (+ (my/float--edge my/float-frame 'top)  dy))))
+(defun my/float-resize (dw dh)
+  (when (frame-live-p my/float-frame)
+    (set-frame-width  my/float-frame (max 24 (+ (frame-width  my/float-frame) dw)))
+    (set-frame-height my/float-frame (max 6  (+ (frame-height my/float-frame) dh)))))
 
 (global-set-key (kbd "<f12>") #'my/toggle-float-buffer)
+;; Mover: M-S-flechas.  Redimensionar: C-M-flechas.  (solo afecta al flotante)
+(global-set-key (kbd "M-S-<left>")  (lambda () (interactive) (my/float-move -60 0)))
+(global-set-key (kbd "M-S-<right>") (lambda () (interactive) (my/float-move  60 0)))
+(global-set-key (kbd "M-S-<up>")    (lambda () (interactive) (my/float-move 0 -60)))
+(global-set-key (kbd "M-S-<down>")  (lambda () (interactive) (my/float-move 0  60)))
+(global-set-key (kbd "C-M-<left>")  (lambda () (interactive) (my/float-resize -6 0)))
+(global-set-key (kbd "C-M-<right>") (lambda () (interactive) (my/float-resize  6 0)))
+(global-set-key (kbd "C-M-<up>")    (lambda () (interactive) (my/float-resize 0 -3)))
+(global-set-key (kbd "C-M-<down>")  (lambda () (interactive) (my/float-resize 0  3)))
 #+end_src
 
 * CONFIGURACIÓN HASKELL + HLS
