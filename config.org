@@ -921,16 +921,28 @@ Segunda llamada: lo cierra. Solo en GUI."
     (set-frame-width  my/float-frame (max 24 (+ (frame-width  my/float-frame) dw)))
     (set-frame-height my/float-frame (max 6  (+ (frame-height my/float-frame) dh)))))
 
-(global-set-key (kbd "<f12>") #'my/toggle-float-buffer)
-;; Mover: M-S-flechas.  Redimensionar: C-M-flechas.  (solo afecta al flotante)
-(global-set-key (kbd "M-S-<left>")  (lambda () (interactive) (my/float-move -60 0)))
-(global-set-key (kbd "M-S-<right>") (lambda () (interactive) (my/float-move  60 0)))
-(global-set-key (kbd "M-S-<up>")    (lambda () (interactive) (my/float-move 0 -60)))
-(global-set-key (kbd "M-S-<down>")  (lambda () (interactive) (my/float-move 0  60)))
-(global-set-key (kbd "C-M-<left>")  (lambda () (interactive) (my/float-resize -6 0)))
-(global-set-key (kbd "C-M-<right>") (lambda () (interactive) (my/float-resize  6 0)))
-(global-set-key (kbd "C-M-<up>")    (lambda () (interactive) (my/float-resize 0 -3)))
-(global-set-key (kbd "C-M-<down>")  (lambda () (interactive) (my/float-resize 0  3)))
+;; Modo transitorio "colocar flotante": entras con M-F12 y, MIENTRAS, las flechas
+;; normales lo MUEVEN y Shift-flechas lo REDIMENSIONAN. Cualquier otra tecla sale.
+;; Asi no pisamos ninguna combo global (M-S-flechas ya era navegacion de ventanas).
+(defun my/float-adjust ()
+  "Coloca el flotante: flechas mueven, Shift-flechas redimensionan, otra tecla sale."
+  (interactive)
+  (unless (and (boundp (quote my/float-frame)) (frame-live-p my/float-frame))
+    (user-error "No hay flotante abierto (pulsa F12 primero)"))
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "<left>")    (lambda () (interactive) (my/float-move -60 0)))
+    (define-key map (kbd "<right>")   (lambda () (interactive) (my/float-move  60 0)))
+    (define-key map (kbd "<up>")      (lambda () (interactive) (my/float-move 0 -60)))
+    (define-key map (kbd "<down>")    (lambda () (interactive) (my/float-move 0  60)))
+    (define-key map (kbd "S-<left>")  (lambda () (interactive) (my/float-resize -6 0)))
+    (define-key map (kbd "S-<right>") (lambda () (interactive) (my/float-resize  6 0)))
+    (define-key map (kbd "S-<up>")    (lambda () (interactive) (my/float-resize 0 -3)))
+    (define-key map (kbd "S-<down>")  (lambda () (interactive) (my/float-resize 0  3)))
+    (message "COLOCAR flotante: flechas=mover · Shift+flechas=tamaño · otra tecla=salir")
+    (set-transient-map map t (lambda () (message "flotante colocado")))))
+
+(global-set-key (kbd "<f12>")   #'my/toggle-float-buffer)
+(global-set-key (kbd "M-<f12>") #'my/float-adjust)
 #+end_src
 
 * CONFIGURACIÓN HASKELL + HLS
