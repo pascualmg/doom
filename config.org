@@ -758,6 +758,17 @@ agenix (privado), no en el repo publico."
 ;; --- Telega ---
 ;; Usar variable de entorno para evitar hardcodear path de Nix store
 (setq telega-server-libs-prefix (getenv "TDLIB_PREFIX"))
+
+;; --- ement.el (cliente Matrix, nuestro hub de mensajeria) ---
+;; Recuerda la sesion tras el primer login (no re-pedir user/pass cada vez).
+(after! ement
+  (setq ement-save-sessions t))
+;; Los datos de conexion (user-id + URL del homeserver) son INFRA INTERNA
+;; (IP de la mesh, server_name) -> NO van en este repo PUBLICO. Se cargan de un
+;; fichero LOCAL gitignoreado (matrix-local.el) que define my/matrix-connect.
+;; Si no existe, se usa M-x ement-connect a mano.
+(let ((local (expand-file-name "matrix-local.el" doom-user-dir)))
+  (when (file-exists-p local) (load local nil t)))
 ;; --- GitHub Copilot ---
 (use-package! copilot
   :hook (prog-mode . copilot-mode)

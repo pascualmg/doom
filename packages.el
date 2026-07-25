@@ -53,6 +53,9 @@
 
 ;; En tu archivo packages.el
 (package! telega)
+;; ement.el: cliente Matrix dentro de Emacs. Nuestro hub de mensajeria
+;; (Telegram/WhatsApp via puentes). Elisp puro sobre plz.el, sin dep nativa.
+(package! ement)
 
 (package! ewal-spacemacs-themes)
 (package! ewal-evil-cursors)
@@ -98,3 +101,6 @@
 ;; Grafo interactivo de org-roam en el navegador (D3.js): zoom, click=saltar
 ;; al nodo, sigue el nodo actual, tema oscuro. Arrastra websocket/simple-httpd/f.
 (package! org-roam-ui)
+
+;; KDL (zellij layouts, etc.) — puesto en caliente por Pascual 2026-07-16, persistido aqui
+(package! kdl-mode)

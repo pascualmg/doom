@@ -3,3 +3,4 @@ config.el
 .config.org.bak
 .packages.el.bak
 run-configs.el
+matrix-local.el
