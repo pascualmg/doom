@@ -762,7 +762,37 @@ agenix (privado), no en el repo publico."
 ;; --- ement.el (cliente Matrix, nuestro hub de mensajeria) ---
 ;; Recuerda la sesion tras el primer login (no re-pedir user/pass cada vez).
 (after! ement
-  (setq ement-save-sessions t))
+  (setq ement-save-sessions t
+        ;; LEGIBILIDAD: por defecto el remitente va en el margen izquierdo
+        ;; (%S dentro del spec) pegado al cuerpo -> se ve apelotonado. Lo
+        ;; movemos a una CABECERA encima de cada bloque (estilo Element):
+        ement-room-sender-headers t        ;; cabecera por remitente
+        ement-room-sender-in-headers t     ;; el nombre va en la cabecera, no en cada linea
+        ement-room-left-margin-width 0     ;; sin margen izq (el nombre ya no vive ahi)
+        ement-room-right-margin-width 10   ;; hueco derecho para la hora
+        ement-room-timestamp-format "%H:%M" ;; hora corta, sin segundos
+        ement-room-prism 'name             ;; colorea nombres de remitente
+        ement-room-prism-minimum-contrast 7)
+  ;; El spec tiene :set propio -> setopt para que RECOMPILE el formateador.
+  ;; Sin %S (el nombre ya va en cabecera): cuerpo formateado + reacciones +
+  ;; hora pegada a la derecha.
+  (setopt ement-room-message-format-spec "%B%r%R%t")
+  ;; Un pelin de aire entre lineas dentro de las salas.
+  (add-hook 'ement-room-mode-hook
+            (lambda () (setq-local line-spacing 0.15))))
+
+;; FIX sync-killer (doomguru 2026-07-28, gotcha roam 11e9a548):
+;; ement hace `rename-buffer' SIN flag unico cuando una sala cambia de nombre
+;; (los bridges mautrix renombran chats al sincronizar perfiles). Si el nombre
+;; nuevo choca con otro buffer (p.ej. dos contactos "cristina" en Telegram+
+;; WhatsApp, o un buffer viejo), rename-buffer PETA; y como eso corre dentro del
+;; procesado del /sync (timer plz--respond), ese error MATA el bucle de sync
+;; entero -> no llegan mensajes nuevos hasta reconectar a mano. Blindaje: si el
+;; rename fuese a fallar por colision, reintentar con nombre unico ("cristina<2>")
+;; en vez de reventar. Es un no-op salvo en el caso exacto de fallo.
+(define-advice rename-buffer (:around (orig newname &optional unique) my/ement-safe-rename)
+  (condition-case _ (funcall orig newname unique) (error (funcall orig newname t))))
+
 ;; Los datos de conexion (user-id + URL del homeserver) son INFRA INTERNA
 ;; (IP de la mesh, server_name) -> NO van en este repo PUBLICO. Se cargan de un
 ;; fichero LOCAL gitignoreado (matrix-local.el) que define my/matrix-connect.
