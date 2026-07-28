@@ -854,13 +854,10 @@ agenix (privado), no en el repo publico."
       (progn (envrc-global-mode -1) (message "[direnv] auto-carga OFF (vacaciones)"))
     (envrc-global-mode +1)
     (message "[direnv] auto-carga ON (modo curro)")))
-(map! :leader
-      (:prefix ("t" . "toggle")
-       :desc "Auto-direnv (envrc)" "E" #'my/direnv-toggle))
-;; Cinturon-y-tirantes: map! se aplica en el arranque pero NO siempre al recargar
-;; config en caliente. define-key directo asegura el bind en ambos casos.
-(when (boundp 'doom-leader-map)
-  (define-key doom-leader-map (kbd "t E") #'my/direnv-toggle))
+;; (El bind `SPC t E' -> my/direnv-toggle se define ABAJO, junto a `SPC t h', en
+;; la seccion INLAY HINTS. Motivo: hay un bloque `map! (:prefix ("t") ...)' en
+;; KEYBINDINGS que RECREA el prefijo "t" y pisaria cualquier bind puesto antes;
+;; por eso va con forma plana y DESPUES de ese bloque, como t h / t o.)
 
 ;; --- GitHub Copilot ---
 (use-package! copilot
@@ -1732,6 +1729,9 @@ Toggle (=SPC t i/I= estaban pillados por indent-bars y el instalador de fuentes)
   (message "Inlay hints: %s (global)" (if lsp-inlay-hint-enable "ON" "OFF")))
 
 (map! :leader :desc "Inlay hints (global)" "t h" #'my/inlay-hints-toggle)
+;; SPC t E -> toggle auto-direnv (envrc). Aqui (forma plana, DESPUES del bloque
+;; :prefix "t") para que no lo pise. La funcion vive en la seccion HERRAMIENTAS.
+(map! :leader :desc "Auto-direnv (envrc)" "t E" #'my/direnv-toggle)
 #+end_src
 
 * PHPUNIT (correr tests desde Emacs, proyectos Vocento con nix+direnv)
