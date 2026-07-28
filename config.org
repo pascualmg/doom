@@ -842,8 +842,11 @@ agenix (privado), no en el repo publico."
 ;; varios proyectos abiertos, la GUI se CONGELA (freeze total) tragando evals.
 ;; En vacaciones no hacen falta -> lo dejamos APAGADO por defecto. Cuando vuelvas
 ;; a currar: `SPC t E' lo reactiva (o `M-x my/direnv-toggle').
-(after! envrc
-  (when (bound-and-true-p envrc-global-mode) (envrc-global-mode -1)))
+(defun my/direnv-off () (when (bound-and-true-p envrc-global-mode) (envrc-global-mode -1)))
+(with-eval-after-load 'envrc (my/direnv-off))
+;; Refuerzo: apagar tambien al FINAL del arranque, gane el orden de carga que gane
+;; (Doom lo activa por su lado; asi nos aseguramos que arranca OFF en vacaciones).
+(add-hook 'doom-after-init-hook #'my/direnv-off)
 (defun my/direnv-toggle ()
   "Activa/desactiva la auto-carga de entornos direnv (envrc-global-mode)."
   (interactive)
@@ -851,7 +854,13 @@ agenix (privado), no en el repo publico."
       (progn (envrc-global-mode -1) (message "[direnv] auto-carga OFF (vacaciones)"))
     (envrc-global-mode +1)
     (message "[direnv] auto-carga ON (modo curro)")))
-(map! :leader :desc "Toggle auto-direnv" "t E" #'my/direnv-toggle)
+(map! :leader
+      (:prefix ("t" . "toggle")
+       :desc "Auto-direnv (envrc)" "E" #'my/direnv-toggle))
+;; Cinturon-y-tirantes: map! se aplica en el arranque pero NO siempre al recargar
+;; config en caliente. define-key directo asegura el bind en ambos casos.
+(when (boundp 'doom-leader-map)
+  (define-key doom-leader-map (kbd "t E") #'my/direnv-toggle))
 
 ;; --- GitHub Copilot ---
 (use-package! copilot
