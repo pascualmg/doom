@@ -4,3 +4,4 @@ config.el
 .packages.el.bak
 run-configs.el
 matrix-local.el
+debug-adapters/

@@ -784,8 +784,8 @@ agenix (privado), no en el repo publico."
 ;; FIX sync-killer (doomguru 2026-07-28, gotcha roam 11e9a548):
 ;; ement hace `rename-buffer' SIN flag unico cuando una sala cambia de nombre
 ;; (los bridges mautrix renombran chats al sincronizar perfiles). Si el nombre
-;; nuevo choca con otro buffer (p.ej. dos contactos "cristina" en Telegram+
-;; WhatsApp, o un buffer viejo), rename-buffer PETA; y como eso corre dentro del
+;; nuevo choca con otro buffer (p.ej. el mismo nombre de contacto en dos bridges
+;; -Telegram y WhatsApp-, o un buffer viejo), rename-buffer PETA; y como corre dentro del
 ;; procesado del /sync (timer plz--respond), ese error MATA el bucle de sync
 ;; entero -> no llegan mensajes nuevos hasta reconectar a mano. Blindaje: si el
 ;; rename fuese a fallar por colision, reintentar con nombre unico ("cristina<2>")
@@ -793,12 +793,66 @@ agenix (privado), no en el repo publico."
 (define-advice rename-buffer (:around (orig newname &optional unique) my/ement-safe-rename)
   (condition-case _ (funcall orig newname unique) (error (funcall orig newname t))))
 
+;; FIX sync-killer #2 (doomguru 2026-07-28, gotcha roam 11e9a548):
+;; `ement-notify' esta en `ement-event-hook' -> corre por CADA evento durante el
+;; procesado del /sync. En ciertos eventos peta:
+;;   - `ement-notifications-log-to-buffer' -> "wrong-type-argument number-or-marker-p nil"
+;;     (status broadcast de WhatsApp, eventos sin timestamp...).
+;;   - en TUI, marcar el frame urgente -> "Window system frame should be used".
+;; Ese error propaga y corta el procesado ANTES de que `ement--auto-sync' agende
+;; el siguiente /sync -> el bucle de sync MUERE y no llegan mensajes nuevos hasta
+;; reconectar a mano. Blindaje: que notificar NUNCA propague. Como mucho se pierde
+;; esa notificacion; el sync sigue VIVO y refrescando solo. (Las notis reales
+;; siguen funcionando cuando no hay evento roto.)
+(define-advice ement-notify (:around (orig &rest args) my/ement-safe-notify)
+  (condition-case _ (apply orig args) (error nil)))
+
+;; WATCHDOG del sync (doomguru 2026-07-28, gotcha roam 11e9a548):
+;; Aunque blindemos los killers, si el proceso de /sync muere por lo que sea
+;; (red, curl matado, un evento raro), la sesion se queda en estado FANTASMA:
+;; `ement-syncs' guarda un proceso muerto -> `ement--sync' sin force grita
+;; "Already syncing" y `ement--auto-sync' nunca reengancha -> no se refresca
+;; hasta reconectar a mano (justo lo que molestaba). Este timer lo revive solo:
+;; cada 90s, si el proceso de sync de una sesion no esta VIVO, fuerza un sync
+;; (force limpia el proceso fantasma y arranca uno nuevo). No-op si esta sano.
+(defvar my/ement-sync-watchdog-timer nil
+  "Timer que revive el /sync de ement si se muere (evita el estado fantasma).")
+(defun my/ement-sync-watchdog ()
+  "Si el proceso de /sync de alguna sesion ement no esta vivo, forzar un sync."
+  (when (and (boundp 'ement-sessions) ement-sessions (boundp 'ement-syncs))
+    (dolist (pair ement-sessions)
+      (let* ((session (cdr pair))
+             (proc (map-elt ement-syncs session)))
+        (unless (process-live-p proc)
+          (condition-case _ (ement--sync session :force t) (error nil)))))))
+(unless (and my/ement-sync-watchdog-timer (memq my/ement-sync-watchdog-timer timer-list))
+  (setq my/ement-sync-watchdog-timer (run-with-timer 90 90 #'my/ement-sync-watchdog)))
+
 ;; Los datos de conexion (user-id + URL del homeserver) son INFRA INTERNA
 ;; (IP de la mesh, server_name) -> NO van en este repo PUBLICO. Se cargan de un
 ;; fichero LOCAL gitignoreado (matrix-local.el) que define my/matrix-connect.
 ;; Si no existe, se usa M-x ement-connect a mano.
 (let ((local (expand-file-name "matrix-local.el" doom-user-dir)))
   (when (file-exists-p local) (load local nil t)))
+
+;; --- DIRENV / envrc: auto-carga OFF (modo vacaciones) ---
+;; Doom (:tools direnv) activa `envrc-global-mode', que al ABRIR cualquier buffer
+;; de un proyecto con .envrc dispara la carga del entorno. En los proyectos
+;; Vocento eso es un `nix eval' PESADO del flake -> al restaurar el workspace con
+;; varios proyectos abiertos, la GUI se CONGELA (freeze total) tragando evals.
+;; En vacaciones no hacen falta -> lo dejamos APAGADO por defecto. Cuando vuelvas
+;; a currar: `SPC t E' lo reactiva (o `M-x my/direnv-toggle').
+(after! envrc
+  (when (bound-and-true-p envrc-global-mode) (envrc-global-mode -1)))
+(defun my/direnv-toggle ()
+  "Activa/desactiva la auto-carga de entornos direnv (envrc-global-mode)."
+  (interactive)
+  (if (bound-and-true-p envrc-global-mode)
+      (progn (envrc-global-mode -1) (message "[direnv] auto-carga OFF (vacaciones)"))
+    (envrc-global-mode +1)
+    (message "[direnv] auto-carga ON (modo curro)")))
+(map! :leader :desc "Toggle auto-direnv" "t E" #'my/direnv-toggle)
+
 ;; --- GitHub Copilot ---
 (use-package! copilot
   :hook (prog-mode . copilot-mode)
