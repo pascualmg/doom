@@ -808,8 +808,13 @@ agenix (privado), no en el repo publico."
 ;; reconectar a mano. Blindaje: que notificar NUNCA propague. Como mucho se pierde
 ;; esa notificacion; el sync sigue VIVO y refrescando solo. (Las notis reales
 ;; siguen funcionando cuando no hay evento roto.)
-(define-advice ement-notify (:around (orig &rest args) my/ement-safe-notify)
-  (condition-case _ (apply orig args) (error nil)))
+;; OJO: `ement-notify' no existe hasta que ement se carga; en un daemon FRESCO
+;; hacer define-advice a nivel top PETA (void-function) y aborta la carga de
+;; config.el entera (mata my/matrix-connect, keybindings, todo). -> diferir a
+;; cuando ement este cargado. (Incidente 2026-07-29: "no va nada tras reiniciar".)
+(with-eval-after-load 'ement
+  (define-advice ement-notify (:around (orig &rest args) my/ement-safe-notify)
+    (condition-case _ (apply orig args) (error nil))))
 
 ;; WATCHDOG del sync (doomguru 2026-07-28, gotcha roam 11e9a548):
 ;; Aunque blindemos los killers, si el proceso de /sync muere por lo que sea
@@ -870,31 +875,38 @@ agenix (privado), no en el repo publico."
 ;; `ement-room-list' escala la imagen a (frame-char-height) = 1 linea de alto, por
 ;; eso se ven pequenos. Redefinimos la MISMA columna (mismo nombre) escalando a
 ;; (* 2 (frame-char-height)) -> avatares del doble (fila ~2 lineas, estilo app movil).
+;; OJO: `eval' con forma CITADA para DIFERIR la macro-expansion a runtime. Si no,
+;; `load' de config.el expande eager el `pcase-let* (cl-struct ement-room ...)' y
+;; en daemon FRESCO el struct ement-room aun no existe -> "ement-room is not a
+;; struct name" y aborta la carga entera (mato my/matrix-connect, keybindings...).
+;; Con la forma citada no se expande hasta que ement-room-list esta cargado.
+;; (Incidente 2026-07-29: "no va nada tras reiniciar".)
 (with-eval-after-load 'ement-room-list
-  (ement-room-list-define-column #("🐱" 0 1 (help-echo "Avatar")) (:align 'right)
-    (pcase-let* ((`[,room ,_session] item)
-                 ((cl-struct ement-room avatar display-name
-                             (local (map room-list-avatar)))
-                  room))
-      (if ement-room-list-avatars
-          (or room-list-avatar
-              (let ((new-avatar
-                     (if avatar
-                         (propertize " " 'display
-                                     (ement--resize-image (get-text-property 0 'display avatar)
-                                                          nil (* 2 (frame-char-height))))
-                       (if ement-room-list-avatar-generation
-                           (let* ((string (or display-name (ement--room-display-name room)))
-                                  (ement-room-prism-minimum-contrast 1)
-                                  (color (ement--prism-color string :contrast-with "white")))
-                             (when (string-match (rx bos (or "#" "!" "@")) string)
-                               (setf string (substring string 1)))
-                             (propertize " " 'display (svg-lib-tag (substring string 0 1) nil
-                                                                   :background color :foreground "white"
-                                                                   :stroke 0)))
-                         " "))))
-                (setf (alist-get 'room-list-avatar (ement-room-local room)) new-avatar)))
-        " "))))
+  (eval '(ement-room-list-define-column #("🐱" 0 1 (help-echo "Avatar")) (:align 'right)
+           (pcase-let* ((`[,room ,_session] item)
+                        ((cl-struct ement-room avatar display-name
+                                    (local (map room-list-avatar)))
+                         room))
+             (if ement-room-list-avatars
+                 (or room-list-avatar
+                     (let ((new-avatar
+                            (if avatar
+                                (propertize " " 'display
+                                            (ement--resize-image (get-text-property 0 'display avatar)
+                                                                 nil (* 2 (frame-char-height))))
+                              (if ement-room-list-avatar-generation
+                                  (let* ((string (or display-name (ement--room-display-name room)))
+                                         (ement-room-prism-minimum-contrast 1)
+                                         (color (ement--prism-color string :contrast-with "white")))
+                                    (when (string-match (rx bos (or "#" "!" "@")) string)
+                                      (setf string (substring string 1)))
+                                    (propertize " " 'display (svg-lib-tag (substring string 0 1) nil
+                                                                          :background color :foreground "white"
+                                                                          :stroke 0)))
+                                " "))))
+                       (setf (alist-get 'room-list-avatar (ement-room-local room)) new-avatar)))
+               " ")))
+        t))
 
 ;; Los datos de conexion (user-id + URL del homeserver) son INFRA INTERNA
 ;; (IP de la mesh, server_name) -> NO van en este repo PUBLICO. Se cargan de un
