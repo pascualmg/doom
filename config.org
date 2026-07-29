@@ -875,6 +875,28 @@ agenix (privado), no en el repo publico."
 ;; `ement-room-list' escala la imagen a (frame-char-height) = 1 linea de alto, por
 ;; eso se ven pequenos. Redefinimos la MISMA columna (mismo nombre) escalando a
 ;; (* 2 (frame-char-height)) -> avatares del doble (fila ~2 lineas, estilo app movil).
+;; AUTO-CARGA de avatares tras (re)conectar (doomguru 2026-07-29): al reconectar,
+;; el sync es INCREMENTAL (reanuda del token guardado) y NO re-procesa los eventos
+;; m.room.avatar viejos -> el handler no se dispara y los iconos no bajan (hay que
+;; reconectar del todo o forzar). Solucion: un hook al final del sync-callback que,
+;; para cada sala con m.room.avatar en estado pero SIN imagen cargada, dispara el
+;; handler (autenticado). Idempotente (salta las ya cargadas) -> barato tras la 1a
+;; vez. `ignore-errors' total + `add-hook' al FINAL para NO poder matar el /sync.
+(defun my/ement-load-missing-avatars (session)
+  "Descarga avatares de salas con m.room.avatar en estado pero sin imagen cargada."
+  (ignore-errors
+    (when (and (boundp 'ement-event-handlers) (bound-and-true-p ement-room-avatars))
+      (let ((h (alist-get "m.room.avatar" ement-event-handlers nil nil #'string=)))
+        (when h
+          (dolist (room (ement-session-rooms session))
+            (unless (ement-room-avatar room)
+              (let ((av (cl-find "m.room.avatar" (ement-room-state room)
+                          :key (lambda (e) (and (ement-event-p e) (ement-event-type e)))
+                          :test #'equal)))
+                (when av (ignore-errors (funcall h av room session)))))))))))
+(with-eval-after-load 'ement
+  (add-hook 'ement-sync-callback-hook #'my/ement-load-missing-avatars t))
+
 ;; OJO: `eval' con forma CITADA para DIFERIR la macro-expansion a runtime. Si no,
 ;; `load' de config.el expande eager el `pcase-let* (cl-struct ement-room ...)' y
 ;; en daemon FRESCO el struct ement-room aun no existe -> "ement-room is not a
