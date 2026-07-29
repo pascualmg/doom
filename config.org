@@ -816,6 +816,17 @@ agenix (privado), no en el repo publico."
   (define-advice ement-notify (:around (orig &rest args) my/ement-safe-notify)
     (condition-case _ (apply orig args) (error nil))))
 
+;; TUI robustez (doomguru 2026-07-29, cierra el pendiente): en terminal el render
+;; de avatares/imagenes da "Window system frame should be used" y ese error
+;; cortaria el sync-callback ANTES de auto-sync. En vez de apagar imagenes GLOBAL
+;; (le quitaria los avatares a la GUI de casa, que son vars globales), blindamos
+;; el refresco de buffers: en TUI se pierde ese render (los avatares no van en
+;; terminal igual), pero el bucle sigue vivo; en GUI es no-op (no hay error) ->
+;; la GUI conserva sus avatares. Complementa al watchdog.
+(with-eval-after-load 'ement
+  (define-advice ement--update-room-buffers (:around (orig &rest args) my/ement-safe-update)
+    (condition-case _ (apply orig args) (error nil))))
+
 ;; WATCHDOG del sync (doomguru 2026-07-28, gotcha roam 11e9a548):
 ;; Aunque blindemos los killers, si el proceso de /sync muere por lo que sea
 ;; (red, curl matado, un evento raro), la sesion se queda en estado FANTASMA:
