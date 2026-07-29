@@ -915,7 +915,7 @@ agenix (privado), no en el repo publico."
                             (if avatar
                                 (propertize " " 'display
                                             (ement--resize-image (get-text-property 0 'display avatar)
-                                                                 nil (* 2 (frame-char-height))))
+                                                                 nil (truncate (* 1.5 (frame-char-height)))))
                               (if ement-room-list-avatar-generation
                                   (let* ((string (or display-name (ement--room-display-name room)))
                                          (ement-room-prism-minimum-contrast 1)
