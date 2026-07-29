@@ -772,7 +772,11 @@ agenix (privado), no en el repo publico."
         ement-room-right-margin-width 10   ;; hueco derecho para la hora
         ement-room-timestamp-format "%H:%M" ;; hora corta, sin segundos
         ement-room-prism 'name             ;; colorea nombres de remitente
-        ement-room-prism-minimum-contrast 7)
+        ement-room-prism-minimum-contrast 7
+        ;; Avatares mas grandes: base 32->64 px para que al escalar al doble en
+        ;; la lista salgan nitidos (no upscale borroso). Ver override de columna abajo.
+        ement-room-avatar-max-width 64
+        ement-room-avatar-max-height 64)
   ;; El spec tiene :set propio -> setopt para que RECOMPILE el formateador.
   ;; Sin %S (el nombre ya va en cabecera): cuerpo formateado + reacciones +
   ;; hora pegada a la derecha.
@@ -861,6 +865,36 @@ agenix (privado), no en el repo publico."
                                         (alist-get 'room-list-avatar (ement-room-local room)) nil))))))
                 (setf (ement-room-avatar room) nil
                       (alist-get 'room-list-avatar (ement-room-local room)) nil)))))))
+
+;; AVATARES AL DOBLE en la lista (doomguru 2026-07-29): la columna de avatar de
+;; `ement-room-list' escala la imagen a (frame-char-height) = 1 linea de alto, por
+;; eso se ven pequenos. Redefinimos la MISMA columna (mismo nombre) escalando a
+;; (* 2 (frame-char-height)) -> avatares del doble (fila ~2 lineas, estilo app movil).
+(with-eval-after-load 'ement-room-list
+  (ement-room-list-define-column #("🐱" 0 1 (help-echo "Avatar")) (:align 'right)
+    (pcase-let* ((`[,room ,_session] item)
+                 ((cl-struct ement-room avatar display-name
+                             (local (map room-list-avatar)))
+                  room))
+      (if ement-room-list-avatars
+          (or room-list-avatar
+              (let ((new-avatar
+                     (if avatar
+                         (propertize " " 'display
+                                     (ement--resize-image (get-text-property 0 'display avatar)
+                                                          nil (* 2 (frame-char-height))))
+                       (if ement-room-list-avatar-generation
+                           (let* ((string (or display-name (ement--room-display-name room)))
+                                  (ement-room-prism-minimum-contrast 1)
+                                  (color (ement--prism-color string :contrast-with "white")))
+                             (when (string-match (rx bos (or "#" "!" "@")) string)
+                               (setf string (substring string 1)))
+                             (propertize " " 'display (svg-lib-tag (substring string 0 1) nil
+                                                                   :background color :foreground "white"
+                                                                   :stroke 0)))
+                         " "))))
+                (setf (alist-get 'room-list-avatar (ement-room-local room)) new-avatar)))
+        " "))))
 
 ;; Los datos de conexion (user-id + URL del homeserver) son INFRA INTERNA
 ;; (IP de la mesh, server_name) -> NO van en este repo PUBLICO. Se cargan de un
