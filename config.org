@@ -828,6 +828,40 @@ agenix (privado), no en el repo publico."
 (unless (and my/ement-sync-watchdog-timer (memq my/ement-sync-watchdog-timer timer-list))
   (setq my/ement-sync-watchdog-timer (run-with-timer 90 90 #'my/ement-sync-watchdog)))
 
+;; FIX avatares/iconos (doomguru 2026-07-29, gotcha roam 11e9a548):
+;; El handler `m.room.avatar' de ement baja el avatar por el endpoint VIEJO sin
+;; autenticar (/_matrix/media/r0/download/ via `plz' directo, `ement--mxc-to-url').
+;; Synapse 1.156 exige media autenticada (MSC3916) y lo rechaza con 400 M_UNKNOWN
+;; -> sin iconos. (NO desactivamos la media autenticada en el server: dejaria las
+;; fotos descargables sin token, peligroso de cara a exponer Synapse por HTTPS.)
+;; ement YA trae `ement--media-request' con :authenticatedp t, que usa la via v1
+;; autenticada (la que SI funciona para imagenes de mensajes). Redefinimos el
+;; handler de avatares para que use esa via. Override en `ement-event-handlers'
+;; (alist de lambdas por tipo) -> no toca el paquete, sobrevive updates.
+(with-eval-after-load 'ement
+  (when (and (boundp 'ement-event-handlers) (fboundp 'ement--media-request))
+    (setf (alist-get "m.room.avatar" ement-event-handlers nil nil #'string=)
+          (lambda (event room session)
+            (when ement-room-avatars
+              (if-let ((url (alist-get 'url (ement-event-content event))))
+                  (ement--media-request url session
+                    :queue ement-images-queue :as 'binary :authenticatedp t
+                    :then (lambda (data)
+                            (when ement-room-avatars
+                              (let ((image (create-image data nil 'data-p
+                                                         :ascent 'center
+                                                         :max-width ement-room-avatar-max-width
+                                                         :max-height ement-room-avatar-max-height)))
+                                (if (not image)
+                                    (setf (ement-room-avatar room) nil
+                                          (alist-get 'room-list-avatar (ement-room-local room)) nil)
+                                  (when (fboundp 'imagemagick-types)
+                                    (setf (image-property image :type) 'imagemagick))
+                                  (setf (ement-room-avatar room) (propertize " " 'display image)
+                                        (alist-get 'room-list-avatar (ement-room-local room)) nil))))))
+                (setf (ement-room-avatar room) nil
+                      (alist-get 'room-list-avatar (ement-room-local room)) nil)))))))
+
 ;; Los datos de conexion (user-id + URL del homeserver) son INFRA INTERNA
 ;; (IP de la mesh, server_name) -> NO van en este repo PUBLICO. Se cargan de un
 ;; fichero LOCAL gitignoreado (matrix-local.el) que define my/matrix-connect.
