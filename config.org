@@ -57,6 +57,21 @@ La primera línea fija el /lexical binding/ (importante para closures):
                (if (executable-find cmd)
                    (propertize "✓ FOUND" 'face 'success)
                  (propertize "✗ NOT FOUND" 'face 'error))))))
+
+;; --- Shell POSIX para los procesos INTERNOS de Emacs (aviso de doom doctor) ---
+;; fish NO es POSIX; las utilidades de Emacs que lanzan subprocesos (diff-hl,
+;; TRAMP, emuladores de terminal) pueden dar problemas raros si el shell interno
+;; es fish. Fix: Emacs usa BASH para sus procesos internos, pero vterm y las
+;; terminales interactivas siguen con FISH (lo que usa Pascual a diario).
+;; executable-find, NO rutas del store: en NixOS /run/current-system/... cambia
+;; entre generaciones y entre maquinas (aurin x86_64 / macuto aarch64). Los
+;; `when' evitan setear a nil si por lo que sea no se encuentra el binario.
+(let ((bash (executable-find "bash"))
+      (fish (executable-find "fish")))
+  (when bash (setq shell-file-name bash))
+  (when fish
+    (setq-default vterm-shell fish)
+    (setq-default explicit-shell-file-name fish)))
 #+end_src
 
 * INTERFAZ Y APARIENCIA
