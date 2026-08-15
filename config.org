@@ -135,9 +135,44 @@ Para anadir mas para el selector interactivo: `change-font'.")
 ;; del flake. Para elegir entre TODAS las instaladas usa `change-font' (SPC t a),
 ;; que lista `font-family-list'.
 
+(defvar my/font-size-by-host
+  '(("macuto" . 36))
+  "Tamaño de fuente base (EN PÍXELES) por máquina.
+Las que no estén aquí usan `my/font-size-default'.")
+
+(defvar my/font-size-default 18
+  "Tamaño base para cualquier máquina no listada. El de siempre.")
+
 (defun setup-fonts ()
-  "Setup main font configuration."
-  (let* ((base-font-size 18)
+  "Setup main font configuration.
+
+TAMAÑO POR MÁQUINA (arreglado 2026-08-15).
+
+EL PROBLEMA: en `font-spec', un `:size' ENTERO significa PÍXELES; un flotante
+significa PUNTOS. Los píxeles NO escalan con la densidad de pantalla. Aquí había
+un 18 pelado, o sea 18 píxeles fijos: correcto en aurin (96 dpi) y MINÚSCULO en
+macuto, que es un panel Retina de 254 PPI. Pascual lo vio nada más abrir Emacs
+allí.
+
+POR QUÉ NO SE DETECTA EL DPI SOLO, que era la idea bonita y NO FUNCIONA:
+
+  · (x-get-resource \"dpi\" \"Xft.dpi\") devuelve nil. Probado en macuto, con y
+    sin frame gráfico. `x-get-resource' busca bajo el espacio de nombres de
+    Emacs, y Xft.dpi no está ahí.
+  · Y aunque funcionara: el daemon arranca SIN pantalla, así que al cargar esta
+    config no hay display del que leer nada. La detección habría devuelto nil y
+    fallado EN SILENCIO, dejando la fuente pequeña igual.
+  · Calcular el DPI real tampoco vale: en Asahi, xrandr reporta el tamaño
+    físico como 0mm x 0mm.
+
+Así que se va por hostname, que el daemon SÍ conoce sin pantalla y sin frame, y
+que además es el patrón que ya usa el resto del enjambre para lo que cambia por
+máquina.
+
+macuto = 36 px (el doble, por los 192 de Xft.dpi que declara su config nix).
+El resto = 18, exactamente como antes. Aurin no cambia ni un píxel."
+  (let* ((base-font-size (or (cdr (assoc (system-name) my/font-size-by-host))
+                             my/font-size-default))
          (nerd-font (find-first-available-font my-nerd-fonts))
          (safe-font (find-first-available-font safe-fonts))
          (main-font-family (or nerd-font safe-font))
@@ -145,14 +180,15 @@ Para anadir mas para el selector interactivo: `change-font'.")
     (when main-font-family
       (setq doom-font (font-spec :family main-font-family :size base-font-size)
             doom-variable-pitch-font (font-spec :family variable-pitch-family :size base-font-size)
-            doom-big-font (font-spec :family main-font-family :size (* base-font-size 1.5))
+            doom-big-font (font-spec :family main-font-family :size (round (* base-font-size 1.5)))
             doom-italic-font (font-spec :family "Hack Nerd Font" :slant 'italic :size base-font-size)
             doom-bold-font (font-spec :family main-font-family :weight 'bold :size base-font-size))
       (when (display-graphic-p)
         (set-face-attribute 'default nil :font doom-font)
         (set-face-attribute 'fixed-pitch nil :font doom-font)
         (set-face-attribute 'variable-pitch nil :font doom-variable-pitch-font))
-      (message "Font configured: %s" main-font-family))))
+      (message "Font configured: %s (%s, size %d)"
+               main-font-family (system-name) base-font-size))))
 
 (setup-fonts)
 
