@@ -792,9 +792,24 @@ agenix (privado), no en el repo publico."
 #+begin_src emacs-lisp
 
 ;; --- Projectile ---
-;; search-path: ~/src/ recursivo + ~/dotfiles. Vocento esta en ~/src/vocento
-;; (subdir, ya detectado). NUNCA poner ~/ aqui (escanearia todo el home).
-(setq projectile-project-search-path '("~/src/" "~/dotfiles/"))
+;; search-path: ~/src/ a DOS niveles + ~/dotfiles.
+;; NUNCA poner ~/ aqui (escanearia todo el home).
+;;
+;; EL (dir . PROFUNDIDAD) NO ES ADORNO, corregido 2026-08-16.
+;; Antes esto era '("~/src/" "~/dotfiles/") con un comentario que decia
+;; que Vocento "ya se detecta por ser subdir de ~/src/". Era MENTIRA:
+;; projectile escanea el search-path a profundidad 1, asi que veia
+;; ~/src/vocento/ (que NO es un proyecto, es un contenedor) y jamas
+;; entraba a ~/src/vocento/<repo>/ (que son los 20 proyectos de verdad).
+;;
+;; En aurin parecia funcionar porque los proyectos habian entrado en
+;; `projectile-known-projects` al abrirlos A MANO. Eso es CACHE LOCAL,
+;; no configuracion: en macuto, recien clonado, projectile conocia 7
+;; proyectos y ni uno de Vocento. La misma leccion de toda la semana:
+;; lo que solo vive en el estado de una maquina, no existe en las otras.
+;;
+;; Con (. 2) se descubren solos en los seis clones, sin abrir nada.
+(setq projectile-project-search-path '(("~/src/" . 2) "~/dotfiles/"))
 
 ;; Salvaguarda: $HOME tiene .git por los dotfiles, ignorar como proyecto.
 (after! projectile
