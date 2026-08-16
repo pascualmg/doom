@@ -792,24 +792,29 @@ agenix (privado), no en el repo publico."
 #+begin_src emacs-lisp
 
 ;; --- Projectile ---
-;; search-path: ~/src/ a DOS niveles + ~/dotfiles.
+;; search-path: ~/src/ + ~/dotfiles, a UN nivel.
 ;; NUNCA poner ~/ aqui (escanearia todo el home).
 ;;
-;; EL (dir . PROFUNDIDAD) NO ES ADORNO, corregido 2026-08-16.
-;; Antes esto era '("~/src/" "~/dotfiles/") con un comentario que decia
-;; que Vocento "ya se detecta por ser subdir de ~/src/". Era MENTIRA:
-;; projectile escanea el search-path a profundidad 1, asi que veia
-;; ~/src/vocento/ (que NO es un proyecto, es un contenedor) y jamas
-;; entraba a ~/src/vocento/<repo>/ (que son los 20 proyectos de verdad).
+;; VOCENTO ES UN SUPER-PROYECTO, y eso es deliberado (aclarado 2026-08-16).
+;; ~/src/vocento/ NO es "una carpeta con 20 repos sueltos": lleva un fichero
+;; `.projectile' VACIO que la marca como RAIZ de proyecto. Efecto: entras una
+;; sola vez y `SPC /' busca de golpe en los VEINTE microservicios, que es como
+;; se trabaja aqui (cambias una interfaz en la libreria y quieres ver quien la
+;; usa en los otros diecinueve).
 ;;
-;; En aurin parecia funcionar porque los proyectos habian entrado en
-;; `projectile-known-projects` al abrirlos A MANO. Eso es CACHE LOCAL,
-;; no configuracion: en macuto, recien clonado, projectile conocia 7
-;; proyectos y ni uno de Vocento. La misma leccion de toda la semana:
-;; lo que solo vive en el estado de una maquina, no existe en las otras.
+;; `.projectile' va ANTES que `.git' en `projectile-project-root-files-bottom-up',
+;; asi que al subir desde un microservicio gana el super-proyecto aunque el
+;; micro tenga su propio .git. Es justo lo que se busca.
 ;;
-;; Con (. 2) se descubren solos en los seis clones, sin abrir nada.
-(setq projectile-project-search-path '(("~/src/" . 2) "~/dotfiles/"))
+;; Y NO, esto no rompe el direnv de cada micro: direnv resuelve por DIRECTORIO
+;; (`.envrc' propio de cada uno, y el super no tiene), no por projectile. Cada
+;; microservicio sigue levantando su toolchain al entrar.
+;;
+;; OJO A LA TENTACION (la tuve el 2026-08-16 y me equivoque): poner
+;; '(("~/src/" . 2) ...) para "descubrir los 20". NO. Eso los mete sueltos en
+;; `SPC p p' y rompe la idea del super-proyecto. Con profundidad 1 se descubre
+;; ~/src/vocento/ ella sola —porque tiene `.projectile'— y con eso basta.
+(setq projectile-project-search-path '("~/src/" "~/dotfiles/"))
 
 ;; Salvaguarda: $HOME tiene .git por los dotfiles, ignorar como proyecto.
 (after! projectile
