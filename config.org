@@ -192,6 +192,65 @@ El resto = 18, exactamente como antes. Aurin no cambia ni un píxel."
 
 (setup-fonts)
 
+;; ─────────────────────────────────────────────────────────────────────
+;; FUENTE DPI-AWARE POR MONITOR (anadido 2026-08-27)
+;;
+;; `setup-fonts' fija el tamaño por HOSTNAME (macuto=36 px), calibrado para
+;; el panel Retina interno. En un monitor externo de MENOS DPI (p.ej. el
+;; ultrawide a ~109 dpi) esos 36 px se ven GIGANTES. Aqui se ajusta el
+;; tamaño POR FRAME segun el DPI REAL del monitor donde vive el frame.
+;;
+;; El panel interno de Asahi reporta 0mm de tamaño fisico (dpi no calculable)
+;; -> se queda con el base del host (36). El externo SI reporta su tamaño
+;; -> se escala proporcional al dpi. Ref: 192 dpi (Xft.dpi de macuto) = base.
+(defvar my/font-reference-dpi 192.0
+  "DPI de referencia para el que `my/font-size-by-host' esta calibrado.
+En macuto es el Xft.dpi que declara la config nix (192): base=36 px alli.")
+
+(defun my/monitor-dpi (&optional frame)
+  "DPI horizontal del monitor de FRAME, o nil si no se puede calcular.
+El panel interno de Asahi reporta 0mm de tamaño fisico -> nil."
+  (let* ((a (frame-monitor-attributes frame))
+         (g (alist-get 'geometry a))
+         (m (alist-get 'mm-size a)))
+    (when (and g m)
+      (let ((pxw (nth 2 g)) (mmw (nth 0 m)))
+        (when (and (numberp pxw) (numberp mmw) (> mmw 0))
+          (/ (* pxw 25.4) mmw))))))
+
+(defun my/font-px-for-frame (&optional frame)
+  "Tamaño de fuente en pixeles para FRAME segun el DPI real de su monitor.
+Escala el base por host proporcional al DPI. Sin DPI -> base tal cual."
+  (let* ((base (or (cdr (assoc (system-name) my/font-size-by-host))
+                   my/font-size-default))
+         (dpi (my/monitor-dpi frame)))
+    (if (and dpi (> dpi 0))
+        (max 12 (round (* base (/ dpi my/font-reference-dpi))))
+      base)))
+
+(defun my/apply-dpi-font (&optional frame)
+  "Ajusta la fuente de FRAME al tamaño segun el DPI de su monitor.
+Solo frames graficos. Defensiva: nunca revienta un hook. Devuelve px o nil."
+  (condition-case err
+      (let ((frame (or frame (selected-frame))))
+        (when (display-graphic-p frame)
+          (let* ((px (my/font-px-for-frame frame))
+                 (fam (or (find-first-available-font my-nerd-fonts)
+                          (find-first-available-font safe-fonts))))
+            (when (and fam px)
+              (set-face-attribute 'default frame :font
+                                  (font-spec :family fam :size px))
+              px))))
+    (error (message "[my/apply-dpi-font] ignorado: %s"
+                    (error-message-string err))
+           nil)))
+
+;; Aplicar al crear cada frame (el daemon arranca sin display; cada frame
+;; grafico nuevo pasa por aqui con su monitor ya conocido) y a los que ya
+;; existan al recargar esta config en vivo.
+(add-hook 'after-make-frame-functions #'my/apply-dpi-font)
+(mapc #'my/apply-dpi-font (frame-list))
+
 ;; Frames de terminal (emacsclient -t): pintar el fondo SOLIDO del theme,
 ;; como hace `emacs -nw'. Por defecto el daemon les deja bg "black"/transparente
 ;; (se ve el fondo del terminal). BLINDADO: solo forzamos el fondo si el frame
