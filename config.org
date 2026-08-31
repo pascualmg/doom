@@ -1085,10 +1085,19 @@ agenix (privado), no en el repo publico."
 ;; varios proyectos abiertos, la GUI se CONGELA (freeze total) tragando evals.
 ;; En vacaciones no hacen falta -> lo dejamos APAGADO por defecto. Cuando vuelvas
 ;; a currar: `SPC t E' lo reactiva (o `M-x my/direnv-toggle').
-(defun my/direnv-off () (when (bound-and-true-p envrc-global-mode) (envrc-global-mode -1)))
-(with-eval-after-load 'envrc (my/direnv-off))
-;; Refuerzo: apagar tambien al FINAL del arranque, gane el orden de carga que gane
-;; (Doom lo activa por su lado; asi nos aseguramos que arranca OFF en vacaciones).
+;; CLAVE: Doom lo engancha con `:hook (doom-first-file . envrc-global-mode)', o
+;; sea que `envrc-global-mode' se ENCIENDE al abrir el PRIMER fichero. Al arrancar,
+;; persp restaura el workspace y abre un buffer Vocento -> se dispara ahi -> y de
+;; golpe cada buffer restaurado lanza su `nix print-dev-env' (AVALANCHA -> freeze).
+;; Apagarlo "despues" perdia la carrera (cuando corria, aun estaba nil). La cura de
+;; verdad es QUITAR ese hook para que no se active solo; `SPC t E' lo reactiva.
+(defun my/direnv-off ()
+  "Impide que `envrc-global-mode' se auto-active (modo vacaciones)."
+  (remove-hook 'doom-first-file-hook #'envrc-global-mode)
+  (when (bound-and-true-p envrc-global-mode) (envrc-global-mode -1)))
+;; Al cargar la config (init), ANTES de que se abra el primer fichero:
+(my/direnv-off)
+;; Y de refuerzo al final del arranque, gane el orden de carga que gane:
 (add-hook 'doom-after-init-hook #'my/direnv-off)
 (defun my/direnv-toggle ()
   "Activa/desactiva la auto-carga de entornos direnv (envrc-global-mode)."
