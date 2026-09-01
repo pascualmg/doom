@@ -252,6 +252,15 @@ Solo frames graficos. Defensiva: nunca revienta un hook. Devuelve px o nil."
 (add-hook 'after-make-frame-functions #'my/apply-dpi-font)
 (mapc #'my/apply-dpi-font (frame-list))
 
+;; ═══════════════════════════════════════════════════════════════════════
+;; AUTO-REVERT — recargar buffers cuando el fichero cambia en disco (externo)
+;; ═══════════════════════════════════════════════════════════════════════
+;; Sin tener que hacer revert-buffer a mano. Usa inotify (instantaneo), no polling.
+(setq auto-revert-use-notify t
+      auto-revert-verbose nil)                 ; sin spam en el minibuffer
+(setq global-auto-revert-non-file-buffers t)   ; tambien Dired, Buffer list, etc.
+(global-auto-revert-mode 1)
+
 ;; Frames de terminal (emacsclient -t): pintar el fondo SOLIDO del theme,
 ;; como hace `emacs -nw'. Por defecto el daemon les deja bg "black"/transparente
 ;; (se ve el fondo del terminal). BLINDADO: solo forzamos el fondo si el frame
