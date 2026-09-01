@@ -231,6 +231,7 @@ Escala el base por host proporcional al DPI. Sin DPI -> base tal cual."
 (defun my/apply-dpi-font (&optional frame)
   "Ajusta la fuente de FRAME al tamaño segun el DPI de su monitor.
 Solo frames graficos. Defensiva: nunca revienta un hook. Devuelve px o nil."
+  (interactive)
   (condition-case err
       (let ((frame (or frame (selected-frame))))
         (when (display-graphic-p frame)
