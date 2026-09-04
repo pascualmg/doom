@@ -2171,3 +2171,34 @@ El codigo vive en su propio fichero para no engordar este documento:
 #+begin_src emacs-lisp
 (load! "brain-search")
 #+end_src
+
+* FIX: CICLO DE HERENCIA EN FACES DE GNUS (EMACS 31)
+
+Emacs 31 detecta un ciclo de herencia entre dos faces de Gnus cuyo =defface=
+se referencia mutuamente: =gnus-group-news-low= hereda de
+=gnus-group-news-low-empty= y =esta= a su vez de =gnus-group-news-low=. Emacs
+<=30 lo toleraba; el 31 lo detecta y REVIENTA al REALIZAR la face en un frame
+NUEVO ("Face inheritance results in inheritance cycle gnus-group-news-low").
+
+Sintoma real (2026-09-04): el scratchpad de Emacs (=Mod+E= en XMonad, un
+=emacsclient -c=) dejaba de abrir frame -- el cliente se quedaba colgado sin
+ventana. El daemon iba bien (su frame ya realizado con el tema doom-one, que
+rompe el ciclo), pero cada frame nuevo petaba antes de aplicar el tema.
+
+Fix: reescribir la =defface-spec= de ambas faces para romper la herencia
+mutua. Se aplica al cargar (por si ya estan definidas) y de nuevo cuando
+=gnus-group= carga (que es cuando el defface original re-entra en juego).
+
+#+begin_src emacs-lisp
+(defun my/fix-gnus-face-inheritance-cycle ()
+  "Rompe el ciclo de herencia gnus-group-news-low<->low-empty (Emacs 31).
+Sin esto, crear un frame nuevo (scratchpad Mod+E) peta con inheritance cycle."
+  (when (facep 'gnus-group-news-low)
+    (put 'gnus-group-news-low 'face-defface-spec
+         '((t :inherit gnus-group-mail-1 :weight bold)))
+    (put 'gnus-group-news-low-empty 'face-defface-spec
+         '((t :inherit gnus-group-mail-1-empty)))))
+
+(my/fix-gnus-face-inheritance-cycle)
+(with-eval-after-load 'gnus-group (my/fix-gnus-face-inheritance-cycle))
+#+end_src
